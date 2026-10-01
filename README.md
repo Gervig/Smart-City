@@ -1,6 +1,18 @@
 # Smart City
 Smart City - database school project
 
+## Project status
+
+The current repository contains the initial domain ERD for the **World Sim**
+project. The implementation must satisfy the final-project requirements:
+PostgreSQL, MongoDB, and Neo4j solutions; a CRUD backend; a one-time migrator;
+authentication and authorization; integration tests; Docker-based local
+development; cloud deployment; and persisted AI-based data enrichment.
+
+The scoped implementation plan is in
+[docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md). It defines the core workflows,
+database responsibilities, delivery phases, and definition of done.
+
 ## Smart City "World Sim" - Entity Relationship Diagram (ERD)
 
 This document outlines the database schema for the persistent simulated city project. It provides a structured foundation for tracking citizens, companies, relationships, real estate, and education history.
@@ -90,17 +102,17 @@ erDiagram
         date graduation_date
     }
 
-    CITIZEN ||--o| HOUSING : "resides_in"
+    CITIZEN }o--o| HOUSING : "resides_in"
     LOCATION ||--o{ HOUSING : "contains"
     LOCATION ||--o| INSTITUTION : "hosts"
-    
-    CITIZEN ||--o{ RELATIONSHIP : "participates_as_1"
-    CITIZEN ||--o{ RELATIONSHIP : "participates_as_2"
-    
+
+    CITIZEN ||--o{ RELATIONSHIP : "participant_1"
+    CITIZEN ||--o{ RELATIONSHIP : "participant_2"
+
     COMPANY ||--o{ JOB : "employs"
     CITIZEN ||--o{ JOB : "works_at"
     COMPANY ||--o{ FINANCIAL_RECORD : "tracks"
-    COMPANY ||--o| COMPANY : "acquired_by"
+    COMPANY o|--o{ COMPANY : "parent_of"
 
     INSTITUTION ||--o{ EDUCATION_RECORD : "offers"
     CITIZEN ||--o{ EDUCATION_RECORD : "attends"
