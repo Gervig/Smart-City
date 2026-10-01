@@ -122,3 +122,7 @@ erDiagram
 * **HOUSING:** Real estate footprints handling multi-family settings like apartment complexes mapping back to specific structural locations.
 * **INSTITUTION:** Physical entities managing community operations (Schools, Hospitals).
 * **EDUCATION_RECORD:** Captures academic tiers (HighSchool, College) paired with specific study focuses (Physics, Medical) across a citizen's timeline.
+
+
+### Google docs
+[Smart City - Google docs link](https://github.com/Gervig/Smart-City)
