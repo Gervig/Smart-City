@@ -102,17 +102,17 @@ erDiagram
         date graduation_date
     }
 
-    CITIZEN ||--o| HOUSING : "resides_in"
+    CITIZEN }o--o| HOUSING : "resides_in"
     LOCATION ||--o{ HOUSING : "contains"
     LOCATION ||--o| INSTITUTION : "hosts"
-    
+
     CITIZEN ||--o{ RELATIONSHIP : "participates_as_1"
     CITIZEN ||--o{ RELATIONSHIP : "participates_as_2"
-    
+
     COMPANY ||--o{ JOB : "employs"
     CITIZEN ||--o{ JOB : "works_at"
     COMPANY ||--o{ FINANCIAL_RECORD : "tracks"
-    COMPANY ||--o| COMPANY : "acquired_by"
+    COMPANY o|--o{ COMPANY : "parent_of"
 
     INSTITUTION ||--o{ EDUCATION_RECORD : "offers"
     CITIZEN ||--o{ EDUCATION_RECORD : "attends"
