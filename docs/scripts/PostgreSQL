@@ -1,0 +1,146 @@
+CREATE TABLE "Citizen" (
+  "id (PK)" <type>,
+  "first_name" <type>,
+  "last_name" <type>,
+  "birth_date" <type>,
+  "death_date (NULLABLE)" <type>,
+  "status (alive / dead)" <type>,
+  "gender" <type>,
+  "age" <type>,
+  "family_id (FK)" <type>,
+  "housing_id (FK)" <type>
+);
+
+CREATE INDEX "Long" ON  "Citizen" ("id (PK)");
+
+CREATE INDEX "String" ON  "Citizen" ("first_name", "last_name", "status (alive / dead)", "gender");
+
+CREATE INDEX "date" ON  "Citizen" ("birth_date", "death_date (NULLABLE)");
+
+CREATE INDEX "int" ON  "Citizen" ("age");
+
+CREATE INDEX "long" ON  "Citizen" ("housing_id (FK)");
+
+CREATE TABLE "Company" (
+  "id (PK)" <type>,
+  "location_id (FK)" <type>,
+  "name" <type>,
+  "founded_date" <type>,
+  "dissolved_date (NULLABLE)" <type>,
+  "status (active / dissolved)" <type>
+);
+
+CREATE INDEX "Long" ON  "Company" ("id (PK)", "location_id (FK)");
+
+CREATE INDEX "String" ON  "Company" ("name", "status (active / dissolved)");
+
+CREATE INDEX "date" ON  "Company" ("founded_date", "dissolved_date (NULLABLE)");
+
+CREATE TABLE "Job" (
+  "id (PK)" <type>,
+  "citizen_id (FK)" <type>,
+  "company_id (FK)" <type>,
+  "institution_id (FK)" <type>,
+  "title" <type>,
+  "salary" <type>,
+  "start_date" <type>,
+  "end_date (NULLABLE)" <type>,
+  "status (active / inactive)" <type>,
+  CONSTRAINT "FK_Job_title"
+    FOREIGN KEY ("title")
+      REFERENCES "Company"("founded_date")
+);
+
+CREATE INDEX "Long" ON  "Job" ("id (PK)", "citizen_id (FK)", "company_id (FK)", "institution_id (FK)");
+
+CREATE INDEX "String" ON  "Job" ("title");
+
+CREATE INDEX "numeric" ON  "Job" ("salary");
+
+CREATE INDEX "date" ON  "Job" ("start_date", "end_date (NULLABLE)");
+
+CREATE INDEX "string" ON  "Job" ("status (active / inactive)");
+
+CREATE TABLE "Family" (
+  "id (PK)" <type>,
+  "family_name" <type>
+);
+
+CREATE INDEX "Long" ON  "Family" ("id (PK)");
+
+CREATE INDEX "String" ON  "Family" ("family_name");
+
+CREATE TABLE "Citizen_Relationship" (
+  "id (PK)" <type>,
+  "citizen_id_1 (FK)" <type>,
+  "citizen_id_2 (FK)" <type>,
+  "relationship_type (parent / child / marriage)" <type>,
+  "start_date" <type>,
+  "end_date (NULLABLE)" <type>,
+  CONSTRAINT "FK_Citizen_Relationship_citizen_id_2 (FK)"
+    FOREIGN KEY ("citizen_id_2 (FK)")
+      REFERENCES "Citizen"("death_date (NULLABLE)")
+);
+
+CREATE INDEX "Long" ON  "Citizen_Relationship" ("id (PK)", "citizen_id_1 (FK)", "citizen_id_2 (FK)");
+
+CREATE INDEX "string" ON  "Citizen_Relationship" ("relationship_type (parent / child / marriage)");
+
+CREATE INDEX "date" ON  "Citizen_Relationship" ("start_date", "end_date (NULLABLE)");
+
+CREATE TABLE "Location" (
+  "id (PK)" <type>,
+  "name" <type>,
+  "street_address" <type>
+);
+
+CREATE INDEX "Long" ON  "Location" ("id (PK)");
+
+CREATE INDEX "string" ON  "Location" ("name", "street_address");
+
+CREATE TABLE "Housing" (
+  "id (PK)" <type>,
+  "location_id (FK)" <type>,
+  "housing_type (house, appartment)" <type>,
+  "capacity" <type>,
+  "" <type>,
+  CONSTRAINT "FK_Housing_housing_type (house, appartment)"
+    FOREIGN KEY ("housing_type (house, appartment)")
+      REFERENCES "Location"("name")
+);
+
+CREATE INDEX "Long" ON  "Housing" ("id (PK)", "location_id (FK)");
+
+CREATE INDEX "String" ON  "Housing" ("housing_type (house, appartment)");
+
+CREATE INDEX "int" ON  "Housing" ("capacity");
+
+CREATE TABLE "Institution" (
+  "id (PK)" <type>,
+  "location_id (FK)" <type>,
+  "name" <type>,
+  "type (High School, College, Hospital)" <type>
+);
+
+CREATE INDEX "Long" ON  "Institution" ("id (PK)", "location_id (FK)");
+
+CREATE INDEX "string" ON  "Institution" ("name", "type (High School, College, Hospital)");
+
+CREATE TABLE "Education_Record" (
+  "id(Pk)" <type>,
+  "citizen_id(FK)" <type>,
+  "institution_id (FK)" <type>,
+  "start_date" <type>,
+  "end_date (NULLABLE)" <type>,
+  CONSTRAINT "FK_Education_Record_institution_id (FK)"
+    FOREIGN KEY ("institution_id (FK)")
+      REFERENCES "Institution"("type (High School, College, Hospital)"),
+  CONSTRAINT "FK_Education_Record_institution_id (FK)"
+    FOREIGN KEY ("institution_id (FK)")
+      REFERENCES "Citizen"("status (alive / dead)")
+);
+
+CREATE INDEX "Long" ON  "Education_Record" ("id(Pk)", "citizen_id(FK)", "institution_id (FK)");
+
+CREATE INDEX "Date" ON  "Education_Record" ("start_date", "end_date (NULLABLE)");
+
