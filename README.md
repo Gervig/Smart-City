@@ -1,6 +1,18 @@
 # Smart City
 Smart City - database school project
 
+## Project status
+
+The current repository contains the initial domain ERD for the **World Sim**
+project. The implementation must satisfy the final-project requirements:
+PostgreSQL, MongoDB, and Neo4j solutions; a CRUD backend; a one-time migrator;
+authentication and authorization; integration tests; Docker-based local
+development; cloud deployment; and persisted AI-based data enrichment.
+
+The scoped implementation plan is in
+[docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md). It defines the core workflows,
+database responsibilities, delivery phases, and definition of done.
+
 ## Smart City "World Sim" - Entity Relationship Diagram (ERD)
 
 This document outlines the database schema for the persistent simulated city project. It provides a structured foundation for tracking citizens, companies, relationships, real estate, and education history.
