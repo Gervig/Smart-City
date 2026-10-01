@@ -20,8 +20,8 @@ trying to simulate every part of a real city.
 
 ### Main domain entities
 
-These entities give the relational model at least ten meaningful main
-entities, while keeping the model related to the original idea:
+These are the meaningful main entities currently in scope, while keeping the
+model related to the original idea:
 
 1. `citizen`
 2. `family`
@@ -32,12 +32,10 @@ entities, while keeping the model related to the original idea:
 7. `job`
 8. `institution`
 9. `education_record`
-10. `vehicle`
 
 Supporting entities include `relationship`, `user`, `role`, and audit/event
 tables. A hospital and a school are represented as institution types rather
-than duplicated tables. Vehicles remain low priority and can be implemented
-after the required workflows are stable.
+than duplicated tables.
 
 ### Core workflows
 
