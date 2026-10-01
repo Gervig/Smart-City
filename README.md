@@ -106,8 +106,8 @@ erDiagram
     LOCATION ||--o{ HOUSING : "contains"
     LOCATION ||--o| INSTITUTION : "hosts"
 
-    CITIZEN ||--o{ RELATIONSHIP : "participates_as_1"
-    CITIZEN ||--o{ RELATIONSHIP : "participates_as_2"
+    CITIZEN ||--o{ RELATIONSHIP : "participant_1"
+    CITIZEN ||--o{ RELATIONSHIP : "participant_2"
 
     COMPANY ||--o{ JOB : "employs"
     CITIZEN ||--o{ JOB : "works_at"
