@@ -17,105 +17,228 @@ database responsibilities, delivery phases, and definition of done.
 
 This document outlines the database schema for the persistent simulated city project. It provides a structured foundation for tracking citizens, companies, relationships, real estate, and education history.
 
-### 1. Mermaid ERD Source Code
+### Relational Database Design
 
-Copy the code below into any Mermaid-compatible editor (like [Mermaid Live Editor](https://mermaid.live/)) to visualize and edit the diagram with your team.
+#### 1.1 Mermaid Logical Model
 
 ```mermaid
+
 erDiagram
+    FAMILY {
+        bigint id PK
+        varchar family_name
+    }
+
     CITIZEN {
-        int citizen_id PK
-        string first_name
-        string last_name
+        bigint id PK
+        varchar first_name
+        varchar last_name
         date birth_date
-        date death_date
-        string status "Alive / Deceased"
-        int current_housing_id FK
-    }
-
-    RELATIONSHIP {
-        int relationship_id PK
-        int citizen_id_1 FK
-        int citizen_id_2 FK
-        string type "Parent/Child, Marriage, Partner, Friend"
-        date established_date
-        date dissolved_date
-    }
-
-    COMPANY {
-        int company_id PK
-        string name
-        date founded_date
-        date dissolved_date
-        int parent_company_id FK "Self-referencing for M&A"
-        string status "Active / Dissolved / Acquired"
-    }
-
-    FINANCIAL_RECORD {
-        int record_id PK
-        int company_id FK
-        string period_type "Daily, Monthly, Quarterly, Annual"
-        date record_date
-        decimal revenue
-        decimal expenses
+        date death_date "Nullable"
+        varchar status
+        varchar gender
+        bigint family_id FK
+        bigint housing_id FK "Nullable"
     }
 
     LOCATION {
-        int location_id PK
-        string name
-        string street_address
-        string type "Commercial, Residential, Institutional"
+        bigint id PK
+        varchar name
+        varchar street_address
     }
 
     HOUSING {
-        int housing_id PK
-        int location_id FK
-        string unit_number "Apartment / House number"
-        string type "Apartment, Condo, House"
+        bigint id PK
+        bigint location_id FK
+        varchar housing_type
         int capacity
     }
 
-    JOB {
-        int job_id PK
-        int citizen_id FK
-        int company_id FK
-        string title
-        decimal salary
-        date start_date
-        date end_date
+    COMPANY {
+        bigint id PK
+        bigint location_id FK
+        varchar name
+        date founded_date
+        date dissolved_date "Nullable"
+        varchar status
     }
 
     INSTITUTION {
-        int institution_id PK
-        int location_id FK
-        string name
-        string type "HighSchool, College, Hospital"
+        bigint id PK
+        bigint location_id FK
+        varchar name
+        varchar type
+    }
+
+    JOB {
+        bigint id PK
+        bigint citizen_id FK
+        bigint company_id FK "Nullable"
+        bigint institution_id FK "Nullable"
+        varchar title
+        numeric salary
+        date start_date
+        date end_date "Nullable"
+        varchar status
     }
 
     EDUCATION_RECORD {
-        int education_id PK
-        int citizen_id FK
-        int institution_id FK
-        string level "HighSchool, Bachelor, Master, PhD"
-        string major_type "Medical, Physics, Social Studies, None"
+        bigint id PK
+        bigint citizen_id FK
+        bigint institution_id FK
         date start_date
-        date graduation_date
+        date end_date "Nullable"
     }
 
-    CITIZEN }o--o| HOUSING : "resides_in"
+    CITIZEN_RELATIONSHIP {
+        bigint id PK
+        bigint citizen_id_1 FK
+        bigint citizen_id_2 FK
+        varchar relationship_type
+        date start_date
+        date end_date "Nullable"
+    }
+
+    FAMILY ||--o{ CITIZEN : has_members
+    HOUSING o|--o{ CITIZEN : houses
+    LOCATION ||--o{ HOUSING : contains
+    LOCATION ||--o{ COMPANY : locates
+    LOCATION ||--o{ INSTITUTION : locates
+    CITIZEN ||--o{ JOB : has_jobs
+    COMPANY o|--o{ JOB : employs
+    INSTITUTION o|--o{ JOB : employs
+    CITIZEN ||--o{ EDUCATION_RECORD : has_education
+    INSTITUTION ||--o{ EDUCATION_RECORD : records
+    CITIZEN ||--o{ CITIZEN_RELATIONSHIP : participant_one
+    CITIZEN ||--o{ CITIZEN_RELATIONSHIP : participant_two
+```
+
+#### 1.2 Mermaid Conceptual Model
+
+```mermaid
+
+flowchart TD
+    Citizen["Citizen"]
+    Family["Family"]
+    Housing["Housing"]
+    Location["Location"]
+    Company["Company"]
+    Institution["Institution"]
+    Employment["Employment"]
+    Education["Education"]
+    Relationship["Personal Relationship"]
+
+    Family -->|"groups members"| Citizen
+    Citizen -->|"may reside in"| Housing
+    Housing -->|"located at"| Location
+    Company -->|"located at"| Location
+    Institution -->|"located at"| Location
+
+    Citizen -->|"has"| Employment
+    Employment -->|"at a company or institution"| Company
+    Employment -->|"at a company or institution"| Institution
+
+    Citizen -->|"has"| Education
+    Education -->|"recorded at"| Institution
+
+    Citizen -->|"participates in"| Relationship
+    Relationship -->|"connects two citizens"| Citizen
+```
+
+#### 1.3 Mermaid ERD
+
+```mermaid
+erDiagram
+    FAMILY {
+        bigint id PK
+        varchar family_name
+    }
+
+    CITIZEN {
+        bigint id PK
+        varchar first_name
+        varchar last_name
+        date birth_date
+        date death_date
+        varchar status "alive / dead"
+        varchar gender
+        bigint family_id FK
+        bigint housing_id FK "Nullable"
+    }
+
+    CITIZEN_RELATIONSHIP {
+        bigint id PK
+        bigint citizen_id_1 FK
+        bigint citizen_id_2 FK
+        varchar relationship_type "parent_child / marriage"
+        date start_date
+        date end_date "Nullable"
+    }
+
+    LOCATION {
+        bigint id PK
+        varchar name
+        varchar street_address
+    }
+
+    HOUSING {
+        bigint id PK
+        bigint location_id FK
+        varchar housing_type "house / apartment"
+        int capacity
+    }
+
+    COMPANY {
+        bigint id PK
+        bigint location_id FK
+        varchar name
+        date founded_date
+        date dissolved_date "Nullable"
+        varchar status "active / dissolved"
+    }
+
+    INSTITUTION {
+        bigint id PK
+        bigint location_id FK
+        varchar name
+        varchar type "high_school / college / hospital"
+    }
+
+    JOB {
+        bigint id PK
+        bigint citizen_id FK
+        bigint company_id FK "Nullable"
+        bigint institution_id FK "Nullable"
+        varchar title
+        numeric salary
+        date start_date
+        date end_date "Nullable"
+        varchar status "active / inactive"
+    }
+
+    EDUCATION_RECORD {
+        bigint id PK
+        bigint citizen_id FK
+        bigint institution_id FK
+        date start_date
+        date end_date "Nullable"
+    }
+
+    FAMILY ||--o{ CITIZEN : "has members"
+    HOUSING o|--o{ CITIZEN : "houses"
     LOCATION ||--o{ HOUSING : "contains"
-    LOCATION ||--o| INSTITUTION : "hosts"
+    LOCATION ||--o{ COMPANY : "locates"
+    LOCATION ||--o{ INSTITUTION : "locates"
 
-    CITIZEN ||--o{ RELATIONSHIP : "participant_1"
-    CITIZEN ||--o{ RELATIONSHIP : "participant_2"
+    CITIZEN ||--o{ JOB : "has employment records"
+    COMPANY o|--o{ JOB : "employs"
+    INSTITUTION o|--o{ JOB : "employs"
 
-    COMPANY ||--o{ JOB : "employs"
-    CITIZEN ||--o{ JOB : "works_at"
-    COMPANY ||--o{ FINANCIAL_RECORD : "tracks"
-    COMPANY o|--o{ COMPANY : "parent_of"
+    CITIZEN ||--o{ EDUCATION_RECORD : "has education records"
+    INSTITUTION ||--o{ EDUCATION_RECORD : "provides education"
 
-    INSTITUTION ||--o{ EDUCATION_RECORD : "offers"
-    CITIZEN ||--o{ EDUCATION_RECORD : "attends"
+    CITIZEN ||--o{ CITIZEN_RELATIONSHIP : "participant one"
+    CITIZEN ||--o{ CITIZEN_RELATIONSHIP : "participant two"
 ```
 
 ### 2. Core Tables Explained
