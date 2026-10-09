@@ -19,7 +19,39 @@ This document outlines the database schema for the persistent simulated city pro
 
 ### Relational Database Design
 
-#### 1.1 Mermaid Logical Model
+#### 1.1 Mermaid Conceptual Model
+
+```mermaid
+
+flowchart TD
+    Citizen["Citizen"]
+    Family["Family"]
+    Housing["Housing"]
+    Location["Location"]
+    Company["Company"]
+    Institution["Institution"]
+    Employment["Employment"]
+    Education["Education"]
+    Relationship["Personal Relationship"]
+
+    Family -->|"groups members"| Citizen
+    Citizen -->|"may reside in"| Housing
+    Housing -->|"located at"| Location
+    Company -->|"located at"| Location
+    Institution -->|"located at"| Location
+
+    Citizen -->|"has"| Employment
+    Employment -->|"at a company or institution"| Company
+    Employment -->|"at a company or institution"| Institution
+
+    Citizen -->|"has"| Education
+    Education -->|"recorded at"| Institution
+
+    Citizen -->|"participates in"| Relationship
+    Relationship -->|"connects two citizens"| Citizen
+```
+
+#### 1.2 Mermaid Logical Model
 
 ```mermaid
 
@@ -111,38 +143,6 @@ erDiagram
     INSTITUTION ||--o{ EDUCATION_RECORD : records
     CITIZEN ||--o{ CITIZEN_RELATIONSHIP : participant_one
     CITIZEN ||--o{ CITIZEN_RELATIONSHIP : participant_two
-```
-
-#### 1.2 Mermaid Conceptual Model
-
-```mermaid
-
-flowchart TD
-    Citizen["Citizen"]
-    Family["Family"]
-    Housing["Housing"]
-    Location["Location"]
-    Company["Company"]
-    Institution["Institution"]
-    Employment["Employment"]
-    Education["Education"]
-    Relationship["Personal Relationship"]
-
-    Family -->|"groups members"| Citizen
-    Citizen -->|"may reside in"| Housing
-    Housing -->|"located at"| Location
-    Company -->|"located at"| Location
-    Institution -->|"located at"| Location
-
-    Citizen -->|"has"| Employment
-    Employment -->|"at a company or institution"| Company
-    Employment -->|"at a company or institution"| Institution
-
-    Citizen -->|"has"| Education
-    Education -->|"recorded at"| Institution
-
-    Citizen -->|"participates in"| Relationship
-    Relationship -->|"connects two citizens"| Citizen
 ```
 
 #### 1.3 Mermaid ERD
