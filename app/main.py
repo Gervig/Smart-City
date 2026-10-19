@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 
+from app.routers import health
+
+# Create FastAPI instance
 app = FastAPI(title="Smart City API")
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+# Add routers here!
+app.include_router(health.router)
