@@ -7,10 +7,17 @@ from app.db import get_db
 
 router = APIRouter()
 
-@router.get("/health", summary="Check API and database status")
+@router.get("/health", summary="Check API status")
 def health(db: Session = Depends(get_db)):
     """
-    Health check endpoint to verify the API and database status.
+    Health check endpoint to verify the API status.
+    """
+    return {"api": "ok"}
+
+@router.get("/health/db", summary="Check database status")
+def health_db(db: Session = Depends(get_db)):
+    """
+    Health check endpoint to verify the database status.
     """
     try:
         # Check if the database is reachable and responding
@@ -20,4 +27,4 @@ def health(db: Session = Depends(get_db)):
     except SQLAlchemyError:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
-    return {"api": "ok", "database": "ok"}
+    return {"database": "ok"}
