@@ -51,6 +51,7 @@ public class HibernateConfig
 //             configuration.addAnnotatedClass();
         configuration.addAnnotatedClass(Role.class);
         configuration.addAnnotatedClass(User.class);
+    
     }
 
     private static EntityManagerFactory createEMF(boolean forTest)
