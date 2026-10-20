@@ -36,5 +36,7 @@ src/main/resources/config.properties
 .idea/vcs.xml
 /target/
 
+.env
+
 # Leftover Python stuff
 .venv
