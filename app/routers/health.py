@@ -8,7 +8,7 @@ from app.db import get_db
 router = APIRouter()
 
 @router.get("/health", summary="Check API status")
-def health(db: Session = Depends(get_db)):
+def health():
     """
     Health check endpoint to verify the API status.
     """
