@@ -1,6 +1,6 @@
 package app.config;
 
-import app.entities.Citizen;
+import app.entities.*;
 import app.security.entities.Role;
 import app.security.entities.User;
 import app.utils.Utils;
@@ -46,13 +46,20 @@ public class HibernateConfig
         return emfTest;
     }
 
-    // TODO: IMPORTANT: Add Entity classes here for them to be registered with Hibernate
+    // Register Entity classes here for them to be registered with Hibernate
     private static void getAnnotationConfiguration(Configuration configuration)
     {
-//             configuration.addAnnotatedClass();
         configuration.addAnnotatedClass(Role.class);
         configuration.addAnnotatedClass(User.class);
+        configuration.addAnnotatedClass(Location.class);
+        configuration.addAnnotatedClass(Family.class);
+        configuration.addAnnotatedClass(Housing.class);
         configuration.addAnnotatedClass(Citizen.class);
+        configuration.addAnnotatedClass(CitizenRelationship.class);
+        configuration.addAnnotatedClass(Institution.class);
+        configuration.addAnnotatedClass(Company.class);
+        configuration.addAnnotatedClass(EducationRecord.class);
+        configuration.addAnnotatedClass(Job.class);
     }
 
     private static EntityManagerFactory createEMF(boolean forTest)
@@ -98,6 +105,7 @@ public class HibernateConfig
         props.put("hibernate.show_sql", "true");
         props.put("hibernate.format_sql", "true");
         props.put("hibernate.use_sql_comments", "true");
+        props.put("hibernate.physical_naming_strategy", "org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy");
         return props;
     }
 

@@ -1,53 +1,25 @@
 package app;
 
 import app.config.HibernateConfig;
-import app.populators.RolePopulator;
-import app.populators.UserPopulator;
-import app.rest.ApplicationConfig;
-import app.rest.Routes;
-import app.security.daos.RoleDAO;
-import app.security.daos.UserDAO;
-import app.security.entities.Role;
-import app.security.entities.User;
-import app.security.rest.SecurityRoutes;
-import jakarta.persistence.EntityManager;
+import app.exceptions.NotFoundException;
+import app.routes.Routes;
+import io.javalin.Javalin;
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.PersistenceException;
 
-import java.util.List;
+import java.util.Map;
 
-public class Main
-{
-    public static void main(String[] args)
-    {
+public class Main {
+    public static void main(String[] args) {
         EntityManagerFactory emf = HibernateConfig.getEntityManagerFactory();
 
-        setupDatabase(emf);
+        Javalin app = Javalin.create()
+                .exception(NotFoundException.class, (e, ctx) -> ctx.status(404).json(Map.of("error", e.getMessage())))
+                .exception(IllegalArgumentException.class, (e, ctx) -> ctx.status(400).json(Map.of("error", e.getMessage())))
+                .exception(PersistenceException.class, (e, ctx) -> ctx.status(409).json(Map.of("error", "Operation violates a database constraint")));
 
-        ApplicationConfig
-                .getInstance()
-                .initiateServer()
-                .securityCheck()
-                .setRoute(Routes.getRoutes(emf))
-                .setRoute(SecurityRoutes.getRoutes(emf))
-                .handleException()
-                .startServer(7070); //TODO change this to an available port for deployment
+        Routes.register(app, emf);
 
+        app.start(7070);
     }
-
-    private static void setupDatabase(EntityManagerFactory emf)
-    {
-        try(EntityManager em = emf.createEntityManager())
-        {
-            // populates the database with roles
-            List<Role> roles = RolePopulator.populate();
-            RoleDAO roleDAO = RoleDAO.getInstance(emf);
-            roles.forEach(roleDAO::createRole);
-
-            // populates the database with users
-            List<User> users = UserPopulator.populate();
-            UserDAO userDAO = UserDAO.getInstance(emf);
-            users.forEach(userDAO::create);
-        }
-    }
-
 }

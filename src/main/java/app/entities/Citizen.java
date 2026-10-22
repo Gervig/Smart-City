@@ -1,30 +1,32 @@
 package app.entities;
 
-import app.dtos.CitizenDTO;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import lombok.*;
-import org.hibernate.annotations.DynamicUpdate;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@DynamicUpdate
-@NoArgsConstructor
-@AllArgsConstructor
-@Getter
-@Builder
-@ToString
+import java.time.LocalDate;
+
 @Entity
-public class Citizen
-{
+@Table(name = "citizen")
+@Getter
+@Setter
+@NoArgsConstructor
+public class Citizen {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String firstName;
+    private String lastName;
+    private LocalDate birthDate;
+    private LocalDate deathDate;
+    private String status;
+    private String gender;
 
-    // constructor
-    public Citizen(CitizenDTO dto)
-    {
-        //TODO: map entity to dto here
-    }
+    @ManyToOne(optional = false)
+    private Family family;
+
+    @ManyToOne
+    private Housing housing;
 }

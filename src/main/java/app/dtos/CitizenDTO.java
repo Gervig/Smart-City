@@ -1,19 +1,6 @@
 package app.dtos;
 
-import app.entities.Citizen;
-import lombok.*;
+import java.time.LocalDate;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class CitizenDTO
-{
-
-    // constructor
-    public CitizenDTO(Citizen citizen)
-    {
-        //TODO: map dto to entity here
-    }
+public record CitizenDTO(Long id, String firstName, String lastName, LocalDate birthDate, LocalDate deathDate, String status, String gender, Long familyId, Long housingId) {
 }
