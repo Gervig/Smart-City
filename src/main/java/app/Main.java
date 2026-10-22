@@ -25,6 +25,7 @@ public class Main {
         SecurityController securityController = new SecurityController();
 
         Javalin app = Javalin.create(config -> {
+            config.bundledPlugins.enableRouteOverview("/api/routes");
             config.router.apiBuilder(() -> {
                 path("/api", SecurityRoutes.getRoutes(emf));
             });
