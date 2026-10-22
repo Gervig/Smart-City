@@ -10,6 +10,7 @@ import org.mindrot.jbcrypt.BCrypt;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
 @DynamicUpdate
@@ -48,7 +49,7 @@ public class User implements ISecurityUser
     @Override
     public Set<String> getRolesAsStrings()
     {
-        return Set.of();
+        return roles.stream().map(Role::getName).collect(Collectors.toSet());
     }
 
     @Override

@@ -16,9 +16,12 @@ public class RoleDAO
 
     public static RoleDAO getInstance(EntityManagerFactory _emf)
     {
-        if(emf == null)
+        if (_emf != null)
         {
             emf = _emf;
+        }
+        if (instance == null)
+        {
             instance = new RoleDAO();
         }
         return instance;

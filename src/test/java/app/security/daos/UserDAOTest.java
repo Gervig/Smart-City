@@ -28,14 +28,16 @@ class UserDAOTest // only works one by one, due to IDs being Strings
     @BeforeEach
     void setup()
     {
+        users = UserPopulator.populate();
+        roles = RolePopulator.populate();
         try (EntityManager em = emf.createEntityManager())
         {
             em.getTransaction().begin();
 
+            // persists all the roles in the list first
+            roles.forEach(roleDAO::createRole);
             // persists all users in the list
             users.forEach(userDAO::create);
-            // persists all the roles in the list
-            roles.forEach(roleDAO::createRole);
             em.getTransaction().commit();
         }
     }

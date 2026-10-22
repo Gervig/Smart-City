@@ -26,9 +26,12 @@ public class UserDAO
 
     public static UserDAO getInstance(EntityManagerFactory _emf)
     {
-        if (emf == null)
+        if (_emf != null)
         {
             emf = _emf;
+        }
+        if (instance == null)
+        {
             instance = new UserDAO();
         }
         return instance;
@@ -40,6 +43,7 @@ public class UserDAO
     {
         try (EntityManager em = emf.createEntityManager())
         {
+            em.getTransaction().begin();
             Set<Role> newRoleSet = new HashSet<>();
             if (user.getRoles().isEmpty())
             {
@@ -64,7 +68,6 @@ public class UserDAO
                 }
             });
             user.setRoles(newRoleSet);
-            em.getTransaction().begin();
             em.persist(user);
             em.getTransaction().commit();
         } catch (Throwable ex)
