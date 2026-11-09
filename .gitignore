@@ -40,4 +40,3 @@ src/main/resources/config.properties
 
 # Leftover Python stuff
 .venv
-.idea/data_source_mapping.xml
