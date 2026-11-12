@@ -66,6 +66,12 @@
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${surefire.version}</version>
+        <configuration>
+          <excludes>
+            <exclude>**/*$*</exclude>
+            <exclude>**/daos/**</exclude>
+          </excludes>
+        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-failsafe-plugin</artifactId>
@@ -78,6 +84,11 @@
             </goals>
           </execution>
         </executions>
+        <configuration>
+          <includes>
+            <include>**/daos/**/*Test.java</include>
+          </includes>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.jacoco</groupId>
