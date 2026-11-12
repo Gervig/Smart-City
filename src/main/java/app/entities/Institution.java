@@ -20,4 +20,9 @@ public class Institution {
 
     private String name;
     private String type;
+
+    // OSM variables
+    private String website;
+    private String phone;
+    private String email;
 }

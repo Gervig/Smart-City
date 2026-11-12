@@ -15,6 +15,13 @@ public class Location {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // OSM variables
     private String name;
+    private double latitude;
+    private double longitude;
+    private Long osmId;
+    private String osmType;
+
+    // TODO: refactor address logic?
     private String streetAddress;
 }
