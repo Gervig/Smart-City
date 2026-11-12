@@ -27,6 +27,13 @@
         <token.security.version>1.0.4</token.security.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
+
+        <!-- NEW: test tooling for the Software Quality exam -->
+        <mockito.version>5.14.2</mockito.version>
+        <assertj.version>3.26.3</assertj.version>
+        <wiremock.version>3.10.0</wiremock.version>
+        <jacoco.version>0.8.12</jacoco.version>
+        <surefire.version>3.5.2</surefire.version>
     </properties>
 
     <repositories>
@@ -129,6 +136,41 @@
             <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- NEW: JUnit 5 integration for Testcontainers (@Testcontainers, @Container) -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- NEW: Mockito for test doubles (mocks, stubs, spies) -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- NEW: AssertJ for readable assertions (optional: Hamcrest is already available) -->
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${assertj.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- NEW: WireMock simulates the external Person Test Data Generator API.
+             The standalone artifact shades its own Jetty so it does not clash with Javalin's Jetty. -->
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock-standalone</artifactId>
+            <version>${wiremock.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -216,11 +258,56 @@
                 </executions>
             </plugin>
 
-            <!-- Maven Surefire Plugin for running tests -->
+            <!-- CHANGED: Surefire runs the FAST unit tests (*Test.java) with `mvn test`.
+                 Version raised from 3.0.0 so it matches Failsafe and supports JUnit 5.11. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>${surefire.version}</version>
+            </plugin>
+
+            <!-- NEW: Failsafe runs the SLOW tests (*IT.java: Testcontainers, API tests) with `mvn verify` -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${surefire.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- NEW: JaCoCo coverage (lines and branches) for unit AND integration tests.
+                 HTML report: target/site/jacoco/index.html (created by `mvn verify`).
+                 MapStruct's generated *MapperImpl classes are left out so they do not distort the numbers. -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/*MapperImpl.class</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
