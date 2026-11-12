@@ -4,12 +4,14 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.DynamicUpdate;
 
 @Entity
 @Table(name = "institution")
 @Getter
 @Setter
 @NoArgsConstructor
+@DynamicUpdate
 public class Institution {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
