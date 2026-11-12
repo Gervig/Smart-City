@@ -261,15 +261,17 @@ erDiagram
 TODO: Reorder these artifacts
 
 ### Software Requirements Specification (SRS)
-[SRS - Gogle docs link](https://docs.google.com/document/d/12_43twPTbJcp6sJGZI9ZfkHtgFDJzKRZcqeY4K8tuIw/edit?tab=t.0#heading=h.xve90k1d8rc2)
+[SRS - Google docs link](https://docs.google.com/document/d/12_43twPTbJcp6sJGZI9ZfkHtgFDJzKRZcqeY4K8tuIw/edit?tab=t.0#heading=h.xve90k1d8rc2)
 
-### Risk Analysis Excel Sheet
-[Risk Analysis - Google Sheets link](https://docs.google.com/spreadsheets/d/1ew919fExgJMIeMAAf5ztmnJAFyG2TaIuBE_qwhcSv_I/edit?gid=0#gid=0)
+### Risk Analysis
+[Risk Analysis - Google sheets link](https://docs.google.com/spreadsheets/d/1ew919fExgJMIeMAAf5ztmnJAFyG2TaIuBE_qwhcSv_I/edit?gid=0#gid=0)
 
-### Acceptance Test Sheet
-[Acceptance Tests - Google Sheets link](https://docs.google.com/spreadsheets/d/1OMXN2rE2uSHdAYjLs14SVel9g7b5vcNSDFF7bDAyxZY/edit?gid=1851569622#gid=1851569622)
+### Acceptance Tests
+[Acceptance Tests - Google sheets link](https://docs.google.com/spreadsheets/d/1OMXN2rE2uSHdAYjLs14SVel9g7b5vcNSDFF7bDAyxZY/edit?gid=1851569622#gid=1851569622)
 
 ### Google docs
+TODO: Mention Database mandatory assignments?
+
 [Smart City - Google docs link](https://docs.google.com/document/d/1vAISXsvhitFOSEO3KfKvNpljURQvqeAmGPBwtWO8zm4/edit?tab=t.0#heading=h.hd4ixaikuq76)
 
 # JPA Template
