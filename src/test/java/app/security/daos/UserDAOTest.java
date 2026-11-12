@@ -1,140 +1,250 @@
 package app.security.daos;
 
 import app.config.HibernateConfig;
+import app.exceptions.ApiException;
 import app.exceptions.ValidationException;
-import app.populators.RolePopulator;
-import app.populators.UserPopulator;
 import app.security.entities.Role;
 import app.security.entities.User;
 import dk.bugelhartmann.UserDTO;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
-import org.junit.jupiter.api.AfterEach;
+import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class UserDAOTest // only works one by one, due to IDs being Strings
+/**
+ * Integration test: UserDAO against a real PostgreSQL started by Testcontainers (Docker must be running).
+ * Maven runs the *DAOTest classes in the verify phase (see the pom), so `mvn test` stays fast and needs no Docker.
+ * <p>
+ * Every test starts from the same known data (see seed()), so the tests do not depend on each other
+ * or on the order they run in:
+ * alice / Password123 / roles: user
+ * bob   / Password456 / roles: user, admin
+ */
+class UserDAOTest
 {
-    private static final EntityManagerFactory emf = HibernateConfig.getEntityManagerFactoryForTest();
-    private static final UserDAO userDAO = UserDAO.getInstance(emf);
-    private static final RoleDAO roleDAO = RoleDAO.getInstance(emf);
-    private static List<User> users = UserPopulator.populate();
-    private static List<Role> roles = RolePopulator.populate();
+    private static EntityManagerFactory emf;
+    private static UserDAO userDAO;
 
+    @BeforeAll
+    static void initDatabase()
+    {
+        emf = HibernateConfig.getEntityManagerFactoryForTest();
+        userDAO = UserDAO.getInstance(emf);
+    }
+
+    // Runs BEFORE each test (not after), so a failed test can never leave dirty data for the next one
     @BeforeEach
-    void setup()
-    {
-        users = UserPopulator.populate();
-        roles = RolePopulator.populate();
-        try (EntityManager em = emf.createEntityManager())
-        {
-            em.getTransaction().begin();
-
-            // persists all the roles in the list first
-            roles.forEach(roleDAO::createRole);
-            // persists all users in the list
-            users.forEach(userDAO::create);
-            em.getTransaction().commit();
-        }
-    }
-
-    @AfterEach
-    void teardown()
+    void seed()
     {
         try (EntityManager em = emf.createEntityManager())
         {
             em.getTransaction().begin();
 
-            // clears previous data
-            em.createQuery("DELETE FROM User").executeUpdate();
-            em.createQuery("DELETE FROM Role").executeUpdate();
+            // wipes all three tables, including the user_role join table
+            em.createNativeQuery("TRUNCATE TABLE user_role, users, roles CASCADE").executeUpdate();
+
+            Role userRole = new Role("user");
+            Role adminRole = new Role("admin");
+            em.persist(userRole);
+            em.persist(adminRole);
+
+            User alice = new User("alice", "Password123");
+            alice.addRole(userRole);
+
+            User bob = new User("bob", "Password456");
+            bob.addRole(userRole);
+            bob.addRole(adminRole);
+
+            em.persist(alice);
+            em.persist(bob);
+
             em.getTransaction().commit();
         }
     }
 
-    @Test
-    void getInstance()
-    {
-        UserDAO instanceTest = UserDAO.getInstance(emf);
-        assertNotNull(instanceTest);
-        assertEquals(instanceTest, userDAO);
-    }
+    // ---------- read ----------
 
     @Test
-    void create()
-    {
-        User expected = new User("Test123", "PasswordTest123");
-        User actual = userDAO.create(expected);
-
-        assertEquals(expected, actual);
-    }
-
-    @Test
+    @DisplayName("returns the user with that username")
     void read()
     {
-        String expected = users.get(0).getUsername();
-        String actual = userDAO.read(expected).getUsername();
+        // Act
+        User actual = userDAO.read("alice");
 
-        assertEquals(expected, actual);
+        // Assert
+        assertEquals("alice", actual.getUsername());
     }
 
     @Test
-    void getVerifiedUser() throws ValidationException
+    @DisplayName("unknown username throws ApiException")
+    void readUnknownUser()
     {
-        String username = users.get(0).getUsername();
-        String password = "Password123"; //password has to be plain text to be tested
-
-        // verifies that user exists and password is correct, creates a new user DTO if successful
-        UserDTO userDTO = userDAO.getVerifiedUser(username, password);
-
-        // asserts that the DTO was created (not null)
-        assertNotNull(userDTO);
-
-        // asserts that the DTO has the same username as the one from the list
-        assertEquals(userDTO.getUsername(), username);
+        assertThrows(ApiException.class, () -> userDAO.read("nobody"));
     }
 
     @Test
+    @DisplayName("returns all users")
     void readAll()
     {
-        List<User> expected = userDAO.readAll();
+        // Act
+        List<User> users = userDAO.readAll();
 
-        assertEquals(expected.size(), 2);
+        // Assert
+        Set<String> usernames = users.stream().map(User::getUsername).collect(Collectors.toSet());
+        assertEquals(Set.of("alice", "bob"), usernames);
+    }
+
+    // ---------- create ----------
+    // Each test reads the result back from the database. Checking the object that create() returns
+    // proves nothing, because create() returns the same object it was given.
+
+    @Test
+    @DisplayName("user without roles gets the default user role")
+    void create()
+    {
+        // Arrange
+        User carol = new User("carol", "Password789");
+
+        // Act
+        userDAO.create(carol);
+
+        // Assert
+        assertEquals(Set.of("user"), rolesOf("carol"));
     }
 
     @Test
+    @DisplayName("user with an existing role is saved with that role")
+    void createWithExistingRole()
+    {
+        // Arrange
+        User dave = new User("dave", "Password789");
+        dave.addRole(new Role("admin"));
+
+        // Act
+        userDAO.create(dave);
+
+        // Assert
+        assertEquals(Set.of("admin"), rolesOf("dave"));
+    }
+
+    @Test
+    @DisplayName("user with an unknown role is not saved")
+    void createWithUnknownRole()
+    {
+        // Arrange
+        User eve = new User("eve", "Password789");
+        eve.addRole(new Role("ghost")); // this role does not exist in the database
+
+        // Act
+        userDAO.create(eve);
+
+        // Assert
+        // NOTE: create() currently swallows the exception (catch Throwable + printStackTrace),
+        // so the caller is never told that saving failed. If you change create() to let the
+        // exception through, replace the act step with assertThrows(...).
+        assertEquals(2, userDAO.readAll().size());
+        assertThrows(ApiException.class, () -> userDAO.read("eve"));
+    }
+
+    // ---------- getVerifiedUser ----------
+
+    @Test
+    @DisplayName("correct password returns a DTO with username and roles")
+    void getVerifiedUser() throws ValidationException
+    {
+        // Act
+        UserDTO dto = userDAO.getVerifiedUser("bob", "Password456");
+
+        // Assert
+        assertEquals("bob", dto.getUsername());
+        assertEquals(Set.of("user", "admin"), dto.getRoles());
+    }
+
+    @ParameterizedTest(name = "{0} with password \"{1}\" is rejected")
+    @CsvSource({
+            "alice, wrongPassword",
+            "alice, password123",   // right password, wrong capitalisation
+            "bob,   Password123"    // another user's password
+    })
+    void getVerifiedUserWrongPassword(String username, String wrongPassword)
+    {
+        assertThrows(ValidationException.class, () -> userDAO.getVerifiedUser(username, wrongPassword));
+    }
+
+    @Test
+    @DisplayName("unknown user throws EntityNotFoundException")
+    void getVerifiedUserUnknownUser()
+    {
+        assertThrows(EntityNotFoundException.class, () -> userDAO.getVerifiedUser("nobody", "Password123"));
+    }
+
+    // ---------- update ----------
+
+    @Test
+    @DisplayName("adding a role saves the new role")
     void update()
     {
-        User expected = users.get(0);
+        // Arrange
+        User alice = loadUserWithRoles("alice");
+        alice.addRole(new Role("admin"));
 
-        expected.addRole(new Role("admin"));
+        // Act
+        userDAO.update(alice);
 
-        expected = userDAO.update(expected);
+        // Assert
+        assertEquals(Set.of("user", "admin"), rolesOf("alice"));
+    }
 
-        assertEquals(expected.getRoles().size(), 2);
+    // ---------- delete ----------
+
+    @Test
+    @DisplayName("removes only that user")
+    void delete()
+    {
+        // Act
+        userDAO.delete("alice");
+
+        // Assert
+        List<User> remaining = userDAO.readAll();
+        assertEquals(1, remaining.size());
+        assertEquals("bob", remaining.get(0).getUsername());
+        assertEquals(Set.of("user", "admin"), rolesOf("bob")); // bob and the roles are untouched
     }
 
     @Test
-    void delete()
+    @DisplayName("unknown username throws ApiException")
+    void deleteUnknownUser()
     {
-        // reads all users
-        List<User> userListBefore = userDAO.readAll();
+        assertThrows(ApiException.class, () -> userDAO.delete("nobody"));
+    }
 
-        // asserts that the size is 2
-        assertEquals(userListBefore.size(), 2);
+    // ---------- helpers: look at the database directly, without using the DAO under test ----------
 
-        // finds a username and deletes it
-        String username = users.get(0).getUsername();
+    private static Set<String> rolesOf(String username)
+    {
+        return loadUserWithRoles(username).getRolesAsStrings();
+    }
 
-        userDAO.delete(username);
-
-        // asserts that the list has one less user
-        List<User> userListAfter = userDAO.readAll();
-
-        assertEquals(userListAfter.size(), 1);
+    // LEFT JOIN FETCH loads the lazy roles while the EntityManager is still open
+    private static User loadUserWithRoles(String username)
+    {
+        try (EntityManager em = emf.createEntityManager())
+        {
+            return em.createQuery(
+                            "SELECT u FROM User u LEFT JOIN FETCH u.roles WHERE u.username = :name", User.class)
+                    .setParameter("name", username)
+                    .getSingleResult();
+        }
     }
 }
