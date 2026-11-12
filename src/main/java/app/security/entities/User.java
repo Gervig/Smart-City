@@ -68,13 +68,14 @@ public class User implements ISecurityUser
     @Override
     public void removeRole(String role)
     {
-        for (Role roleEntity : roles)
+        roles.removeIf(r ->
         {
-            if (roleEntity.getName().equals(role))
+            if (r.getName().equals(role))
             {
-                roles.remove(roleEntity);
-                roleEntity.getUsers().remove(this);
+                r.getUsers().remove(this);
+                return true;
             }
-        }
+            return false;
+        });
     }
 }
