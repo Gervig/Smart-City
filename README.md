@@ -274,6 +274,17 @@ TODO: Mention Database mandatory assignments?
 
 [Smart City - Google docs link](https://docs.google.com/document/d/1vAISXsvhitFOSEO3KfKvNpljURQvqeAmGPBwtWO8zm4/edit?tab=t.0#heading=h.hd4ixaikuq76)
 
+### External API(s)
+
+TODO: these are candidates, update once team has decided on final APIs.
+
+[Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) - OpenStreetMap + Overpass API
+
+[Open-Meteo](https://open-meteo.com/en/docs) – Weather and environmental simulation
+
+[OpenAQ](https://docs.openaq.org) – Air quality data
+
+
 # JPA Template
 This project was initialized using a JPA template for creating REST APIs using Java, JPA, Lombok, Javalin and Hibernate.
 
