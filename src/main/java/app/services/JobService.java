@@ -8,6 +8,7 @@ import app.entities.Company;
 import app.entities.Institution;
 import app.entities.Job;
 import app.mappers.JobMapper;
+import app.validators.JobValidator;
 
 public class JobService extends AbstractCrudService<Job, JobDTO, JobRequestDTO> {
     private final GenericDAO<Citizen> citizenDAO;
@@ -22,11 +23,20 @@ public class JobService extends AbstractCrudService<Job, JobDTO, JobRequestDTO> 
     }
 
     @Override
+    protected void validate(JobRequestDTO request) {
+        JobValidator.validate(request);
+    }
+
+    @Override
     protected void resolveReferences(Job entity, JobRequestDTO request) {
-        if (request.companyId() == null && request.institutionId() == null) {
-            throw new IllegalArgumentException("A job needs a company or an institution");
-        }
         entity.setCitizen(citizenDAO.findByIdOrThrow(request.citizenId()));
+        if (request.startDate().isBefore(entity.getCitizen().getBirthDate())) {
+            throw new IllegalArgumentException("startDate must not be before the citizen's birthDate");
+        }
+        if (entity.getCitizen().getDeathDate() != null
+                && request.startDate().isAfter(entity.getCitizen().getDeathDate())) {
+            throw new IllegalArgumentException("startDate must not be after the citizen's deathDate");
+        }
         entity.setCompany(optional(companyDAO, request.companyId()));
         entity.setInstitution(optional(institutionDAO, request.institutionId()));
     }

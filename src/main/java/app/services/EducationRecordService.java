@@ -7,6 +7,7 @@ import app.entities.Citizen;
 import app.entities.EducationRecord;
 import app.entities.Institution;
 import app.mappers.EducationRecordMapper;
+import app.validators.EducationRecordValidator;
 
 public class EducationRecordService extends AbstractCrudService<EducationRecord, EducationRecordDTO, EducationRecordRequestDTO> {
     private final GenericDAO<Citizen> citizenDAO;
@@ -16,6 +17,11 @@ public class EducationRecordService extends AbstractCrudService<EducationRecord,
         super(dao, EducationRecordMapper.INSTANCE::toDTO, EducationRecordMapper.INSTANCE::toEntity, EducationRecordMapper.INSTANCE::update);
         this.citizenDAO = citizenDAO;
         this.institutionDAO = institutionDAO;
+    }
+
+    @Override
+    protected void validate(EducationRecordRequestDTO request) {
+        EducationRecordValidator.validate(request);
     }
 
     @Override

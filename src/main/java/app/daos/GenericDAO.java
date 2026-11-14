@@ -52,6 +52,14 @@ public class GenericDAO<T> {
         }
     }
 
+    public long countWhere(String attributePath, Object value) {
+        try (EntityManager em = emf.createEntityManager()) {
+            return em.createQuery("SELECT COUNT(e) FROM " + type.getSimpleName() + " e WHERE e." + attributePath + " = :value", Long.class)
+                    .setParameter("value", value)
+                    .getSingleResult();
+        }
+    }
+
     public void delete(Long id) {
         if (id == null) {
             throw new IllegalArgumentException(type.getSimpleName() + " id is required");

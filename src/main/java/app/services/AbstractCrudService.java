@@ -25,6 +25,9 @@ public abstract class AbstractCrudService<E, D, R> implements CrudService<D, R> 
     protected void resolveReferences(E entity, R request) {
     }
 
+    protected void validate(R request) {
+    }
+
     protected <T> T optional(GenericDAO<T> refDao, Long id) {
         return id == null ? null : refDao.findByIdOrThrow(id);
     }
@@ -41,6 +44,7 @@ public abstract class AbstractCrudService<E, D, R> implements CrudService<D, R> 
 
     @Override
     public D create(R request) {
+        validate(request);
         E e = toEntity.apply(request);
         resolveReferences(e, request);
         return toDTO.apply(dao.persist(e));
@@ -48,6 +52,7 @@ public abstract class AbstractCrudService<E, D, R> implements CrudService<D, R> 
 
     @Override
     public D update(Long id, R request) {
+        validate(request);
         E e = dao.findByIdOrThrow(id);
         applyUpdate.accept(request, e);
         resolveReferences(e, request);

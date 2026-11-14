@@ -6,6 +6,7 @@ import app.dtos.CitizenRelationshipRequestDTO;
 import app.entities.Citizen;
 import app.entities.CitizenRelationship;
 import app.mappers.CitizenRelationshipMapper;
+import app.validators.CitizenRelationshipValidator;
 
 public class CitizenRelationshipService extends AbstractCrudService<CitizenRelationship, CitizenRelationshipDTO, CitizenRelationshipRequestDTO> {
     private final GenericDAO<Citizen> citizenDAO;
@@ -13,6 +14,11 @@ public class CitizenRelationshipService extends AbstractCrudService<CitizenRelat
     public CitizenRelationshipService(GenericDAO<CitizenRelationship> dao, GenericDAO<Citizen> citizenDAO) {
         super(dao, CitizenRelationshipMapper.INSTANCE::toDTO, CitizenRelationshipMapper.INSTANCE::toEntity, CitizenRelationshipMapper.INSTANCE::update);
         this.citizenDAO = citizenDAO;
+    }
+
+    @Override
+    protected void validate(CitizenRelationshipRequestDTO request) {
+        CitizenRelationshipValidator.validate(request);
     }
 
     @Override

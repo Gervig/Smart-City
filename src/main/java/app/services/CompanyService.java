@@ -6,6 +6,7 @@ import app.dtos.CompanyRequestDTO;
 import app.entities.Company;
 import app.entities.Location;
 import app.mappers.CompanyMapper;
+import app.validators.CompanyValidator;
 
 public class CompanyService extends AbstractCrudService<Company, CompanyDTO, CompanyRequestDTO> {
     private final GenericDAO<Location> locationDAO;
@@ -13,6 +14,11 @@ public class CompanyService extends AbstractCrudService<Company, CompanyDTO, Com
     public CompanyService(GenericDAO<Company> dao, GenericDAO<Location> locationDAO) {
         super(dao, CompanyMapper.INSTANCE::toDTO, CompanyMapper.INSTANCE::toEntity, CompanyMapper.INSTANCE::update);
         this.locationDAO = locationDAO;
+    }
+
+    @Override
+    protected void validate(CompanyRequestDTO request) {
+        CompanyValidator.validate(request);
     }
 
     @Override

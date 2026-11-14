@@ -1,7 +1,5 @@
-package app.security.daos;
+package app.security.entities;
 
-import app.security.entities.Role;
-import app.security.entities.User;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
