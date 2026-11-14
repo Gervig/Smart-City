@@ -258,8 +258,6 @@ erDiagram
 * **INSTITUTION:** Physical entities managing community operations (Schools, Hospitals).
 * **EDUCATION_RECORD:** Captures academic tiers (HighSchool, College) paired with specific study focuses (Physics, Medical) across a citizen's timeline.
 
-TODO: Reorder these artifacts
-
 ### Software Requirements Specification (SRS)
 [SRS - Google docs link](https://docs.google.com/document/d/12_43twPTbJcp6sJGZI9ZfkHtgFDJzKRZcqeY4K8tuIw/edit?tab=t.0#heading=h.xve90k1d8rc2)
 
@@ -281,6 +279,14 @@ TODO: Mention Database mandatory assignments?
 
 # JPA Template
 This project was initialized using a JPA template for creating REST APIs using Java, JPA, Lombok, Javalin and Hibernate.
+
+# Setup
+
+## Docker setup - PostgreSQL & pgAdmin
+
+Clone the following repo: https://github.com/dat2Cph/2semDockerSetupLocal/tree/main
+
+Follow instructions in README for docker setup and pgAdmin configuration.
 
 # Endpoint Table
 
