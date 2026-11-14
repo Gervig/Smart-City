@@ -233,233 +233,283 @@ Registration and login accept JSON credentials, for example:
 
 The route overview is available at `/api/routes` while the application is running. Error responses and exact request fields depend on the corresponding DTOs and validators in `src/main/java/app/dtos/` and `src/main/java/app/validators/`.
 
-## Database design and SQL
+## Database Design
 
-#### Conceptual Model
+The database design follows three stages of relational database modelling:
+
+#### 1. Conceptual Model
 
 ```mermaid
 
 flowchart TD
-    Citizen["Citizen"]
     Family["Family"]
+    Citizen["Citizen"]
     Housing["Housing"]
     Location["Location"]
     Company["Company"]
     Institution["Institution"]
-    Employment["Employment"]
+    Job["Employment"]
     Education["Education"]
-    Relationship["Personal Relationship"]
+    Relationship["Citizen Relationship"]
 
-    Family -->|"groups members"| Citizen
-    Citizen -->|"may reside in"| Housing
+    Family -->|"groups"| Citizen
+    Citizen -->|"may live in"| Housing
     Housing -->|"located at"| Location
+
     Company -->|"located at"| Location
     Institution -->|"located at"| Location
 
-    Citizen -->|"has"| Employment
-    Employment -->|"at a company or institution"| Company
-    Employment -->|"at a company or institution"| Institution
+    Citizen -->|"has"| Job
+    Job -->|"at"| Company
+    Job -->|"at"| Institution
 
     Citizen -->|"has"| Education
-    Education -->|"recorded at"| Institution
+    Education -->|"at"| Institution
 
     Citizen -->|"participates in"| Relationship
     Relationship -->|"connects two citizens"| Citizen
+
 ```
 
-#### Logical Model
+The conceptual model provides a high-level overview of the Smart City domain. It identifies the main entities and illustrates how they interact, without including implementation details such as attributes, primary keys or foreign keys.
 
-```mermaid
+#### 2. Logical Model
+
+```mermaid 
 
 erDiagram
     FAMILY {
-        bigint id PK
-        varchar family_name
+        identifier id PK
+        text familyName
     }
 
     CITIZEN {
-        bigint id PK
-        varchar first_name
-        varchar last_name
-        date birth_date
-        date death_date "Nullable"
-        varchar status
-        varchar gender
-        bigint family_id FK
-        bigint housing_id FK "Nullable"
-    }
-
-    LOCATION {
-        bigint id PK
-        varchar name
-        varchar street_address
+        identifier id PK
+        text firstName
+        text lastName
+        date birthDate
+        date deathDate
+        text status
+        text gender
+        identifier family_id FK
+        identifier housing_id FK "Optional"
     }
 
     HOUSING {
-        bigint id PK
-        bigint location_id FK
-        varchar housing_type
-        int capacity
+        identifier id PK
+        identifier location_id FK
+        text housingType
+        number capacity
+        number numberOfLevels
+        number numberOfFlats
+        number height
+    }
+
+    LOCATION {
+        identifier id PK
+        text streetAddress
+        text name
+        number latitude
+        number longitude
+        identifier osmId
+        text osmType
     }
 
     COMPANY {
-        bigint id PK
-        bigint location_id FK
-        varchar name
-        date founded_date
-        date dissolved_date "Nullable"
-        varchar status
+        identifier id PK
+        identifier location_id FK
+        text name
+        text cvrNumber
+        text productionUnitNumber
+        text website
+        text phone
+        text email
+        text category
+        text openingHours
+        date foundedDate
+        date dissolvedDate
+        text status
     }
 
     INSTITUTION {
-        bigint id PK
-        bigint location_id FK
-        varchar name
-        varchar type
+        identifier id PK
+        identifier location_id FK
+        text name
+        text type
+        text website
+        text phone
+        text email
     }
 
     JOB {
-        bigint id PK
-        bigint citizen_id FK
-        bigint company_id FK "Nullable"
-        bigint institution_id FK "Nullable"
-        varchar title
-        numeric salary
-        date start_date
-        date end_date "Nullable"
-        varchar status
+        identifier id PK
+        identifier citizen_id FK
+        identifier company_id FK "Optional"
+        identifier institution_id FK "Optional"
+        text title
+        decimal salary
+        date startDate
+        date endDate
+        text status
     }
 
     EDUCATION_RECORD {
-        bigint id PK
-        bigint citizen_id FK
-        bigint institution_id FK
-        date start_date
-        date end_date "Nullable"
+        identifier id PK
+        identifier citizen_id FK
+        identifier institution_id FK
+        date startDate
+        date endDate
     }
 
     CITIZEN_RELATIONSHIP {
-        bigint id PK
-        bigint citizen_id_1 FK
-        bigint citizen_id_2 FK
-        varchar relationship_type
-        date start_date
-        date end_date "Nullable"
+        identifier id PK
+        identifier citizen_id_1 FK
+        identifier citizen_id_2 FK
+        text relationshipType
+        date startDate
+        date endDate
     }
 
-    FAMILY ||--o{ CITIZEN : has_members
-    HOUSING o|--o{ CITIZEN : houses
+    FAMILY ||--o{ CITIZEN : contains
+    HOUSING o|--o{ CITIZEN : accommodates
     LOCATION ||--o{ HOUSING : contains
     LOCATION ||--o{ COMPANY : locates
     LOCATION ||--o{ INSTITUTION : locates
-    CITIZEN ||--o{ JOB : has_jobs
+
+    CITIZEN ||--o{ JOB : has
     COMPANY o|--o{ JOB : employs
     INSTITUTION o|--o{ JOB : employs
-    CITIZEN ||--o{ EDUCATION_RECORD : has_education
-    INSTITUTION ||--o{ EDUCATION_RECORD : records
+
+    CITIZEN ||--o{ EDUCATION_RECORD : has
+    INSTITUTION ||--o{ EDUCATION_RECORD : provides
+
     CITIZEN ||--o{ CITIZEN_RELATIONSHIP : participant_one
     CITIZEN ||--o{ CITIZEN_RELATIONSHIP : participant_two
+
 ```
 
-#### Entity Relationship Diagram (ERD)
+The logical model expands on the conceptual design by defining the attributes of each entity, identifying primary and foreign keys, and specifying the relationships and cardinalities between entities.
 
-```mermaid
+It is independent of the database management system and focuses on the logical organization of the data.
+
+#### 3. Physical Model (Entity Relationship Diagram)
+````mermaid
+
 erDiagram
-    FAMILY {
-        bigint id PK
-        varchar family_name
+    family {
+        BIGINT id PK
+        VARCHAR family_name
     }
 
-    CITIZEN {
-        bigint id PK
-        varchar first_name
-        varchar last_name
-        date birth_date
-        date death_date
-        varchar status "alive / dead"
-        varchar gender
-        bigint family_id FK
-        bigint housing_id FK "Nullable"
+    citizen {
+        BIGINT id PK
+        VARCHAR first_name
+        VARCHAR last_name
+        DATE birth_date
+        DATE death_date
+        VARCHAR status
+        VARCHAR gender
+        BIGINT family_id FK
+        BIGINT housing_id FK
     }
 
-    CITIZEN_RELATIONSHIP {
-        bigint id PK
-        bigint citizen_id_1 FK
-        bigint citizen_id_2 FK
-        varchar relationship_type "parent_child / marriage"
-        date start_date
-        date end_date "Nullable"
+    housing {
+        BIGINT id PK
+        BIGINT location_id FK
+        VARCHAR housing_type
+        INTEGER capacity
+        INTEGER number_of_levels
+        INTEGER number_of_flats
+        DOUBLE_PRECISION height
     }
 
-    LOCATION {
-        bigint id PK
-        varchar name
-        varchar street_address
+    location {
+        BIGINT id PK
+        VARCHAR street_address
+        VARCHAR name
+        DOUBLE_PRECISION latitude
+        DOUBLE_PRECISION longitude
+        BIGINT osm_id
+        VARCHAR osm_type
     }
 
-    HOUSING {
-        bigint id PK
-        bigint location_id FK
-        varchar housing_type "house / apartment"
-        int capacity
+    company {
+        BIGINT id PK
+        BIGINT location_id FK
+        VARCHAR name
+        VARCHAR cvr_number
+        VARCHAR production_unit_number
+        VARCHAR website
+        VARCHAR phone
+        VARCHAR email
+        VARCHAR category
+        VARCHAR opening_hours
+        DATE founded_date
+        DATE dissolved_date
+        VARCHAR status
     }
 
-    COMPANY {
-        bigint id PK
-        bigint location_id FK
-        varchar name
-        date founded_date
-        date dissolved_date "Nullable"
-        varchar status "active / dissolved"
+    institution {
+        BIGINT id PK
+        BIGINT location_id FK
+        VARCHAR name
+        VARCHAR type
+        VARCHAR website
+        VARCHAR phone
+        VARCHAR email
     }
 
-    INSTITUTION {
-        bigint id PK
-        bigint location_id FK
-        varchar name
-        varchar type "high_school / college / hospital"
+    job {
+        BIGINT id PK
+        BIGINT citizen_id FK
+        BIGINT company_id FK
+        BIGINT institution_id FK
+        VARCHAR title
+        NUMERIC salary
+        DATE start_date
+        DATE end_date
+        VARCHAR status
     }
 
-    JOB {
-        bigint id PK
-        bigint citizen_id FK
-        bigint company_id FK "Nullable"
-        bigint institution_id FK "Nullable"
-        varchar title
-        numeric salary
-        date start_date
-        date end_date "Nullable"
-        varchar status "active / inactive"
+    education_record {
+        BIGINT id PK
+        BIGINT citizen_id FK
+        BIGINT institution_id FK
+        DATE start_date
+        DATE end_date
     }
 
-    EDUCATION_RECORD {
-        bigint id PK
-        bigint citizen_id FK
-        bigint institution_id FK
-        date start_date
-        date end_date "Nullable"
+    citizen_relationship {
+        BIGINT id PK
+        BIGINT citizen_id_1 FK
+        BIGINT citizen_id_2 FK
+        VARCHAR relationship_type
+        DATE start_date
+        DATE end_date
     }
 
-    FAMILY ||--o{ CITIZEN : "has members"
-    HOUSING o|--o{ CITIZEN : "houses"
-    LOCATION ||--o{ HOUSING : "contains"
-    LOCATION ||--o{ COMPANY : "locates"
-    LOCATION ||--o{ INSTITUTION : "locates"
+    family ||--o{ citizen : has
+    housing o|--o{ citizen : houses
+    location ||--o{ housing : contains
+    location ||--o{ company : locates
+    location ||--o{ institution : locates
 
-    CITIZEN ||--o{ JOB : "has employment records"
-    COMPANY o|--o{ JOB : "employs"
-    INSTITUTION o|--o{ JOB : "employs"
+    citizen ||--o{ job : has
+    company o|--o{ job : employs
+    institution o|--o{ job : employs
 
-    CITIZEN ||--o{ EDUCATION_RECORD : "has education records"
-    INSTITUTION ||--o{ EDUCATION_RECORD : "provides education"
+    citizen ||--o{ education_record : has
+    institution ||--o{ education_record : provides
 
-    CITIZEN ||--o{ CITIZEN_RELATIONSHIP : "participant one"
-    CITIZEN ||--o{ CITIZEN_RELATIONSHIP : "participant two"
-```
+    citizen ||--o{ citizen_relationship : participant_one
+    citizen ||--o{ citizen_relationship : participant_two
 
-The JPA entities in `src/main/java/app/entities/` model citizens, families, housing, locations, companies, institutions, jobs, education records, and relationships. The diagrams under `docs/erd/` show the conceptual and relational models.
+````
+The physical model translates the logical design into a database structure. It specifies the database tables, columns, SQL data types, primary keys and foreign keys.
 
-`SQL/` contains PostgreSQL assignment scripts, including schema definitions, stored functions and procedures, triggers, views, and a `pg_cron` event example. These scripts are maintained separately from Hibernate's runtime schema creation; review the target database carefully before executing any destructive SQL script.
+The application uses PostgreSQL with Hibernate and JPA to manage the runtime database schema. The Java entity classes define the application's persistent domain model, while the SQL scripts in `SQL/` contain separate database-assignment implementations.
+
+The three models represent different levels of detail of the same Smart City domain.
 
 ## Continuous integration and delivery
 
