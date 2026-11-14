@@ -53,7 +53,7 @@ variables:
     secret: true
     disabled: false
 auth:
-  - id: fce2b6e2-4d9f-4001-9693-db3eb5f2ce79
+  - id: c50e4a16-9123-4f3a-9525-e1122672370c
     type: bearer
     name: bearer auth
     credentials:
