@@ -5,13 +5,18 @@ import app.daos.GenericDAO;
 import app.dtos.*;
 import app.entities.*;
 import app.controllers.NearbyPlacesController;
+import app.controllers.SeedController;
 import app.external.overpass.HttpOverpassClient;
+import app.security.enums.Role;
 import app.services.*;
 import io.javalin.Javalin;
+import io.javalin.http.HandlerType;
 import jakarta.persistence.EntityManagerFactory;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Random;
+
 
 public class Routes {
     public static void register(Javalin app, EntityManagerFactory emf) {
@@ -38,9 +43,10 @@ public class Routes {
         if (overpassUrl == null || overpassUrl.isBlank()) {
             overpassUrl = HttpOverpassClient.DEFAULT_ENDPOINT_URL;
         }
-        NearbyPlacesService nearbyPlacesService = new NearbyPlacesService(locationDAO,
-                new HttpOverpassClient(overpassUrl, Duration.ofSeconds(10)),
-                Clock.systemUTC());
+        HttpOverpassClient overpassClient = new HttpOverpassClient(overpassUrl, Duration.ofSeconds(10));
+        NearbyPlacesService nearbyPlacesService = new NearbyPlacesService(locationDAO, overpassClient, Clock.systemUTC());
+        SeedService seedService = new SeedService(locationDAO, familyDAO, housingDAO, citizenDAO, institutionDAO,
+                companyDAO, educationRecordDAO, jobDAO, citizenRelationshipDAO, overpassClient, new Random());
 
         crud(app, "/locations", new CrudController<>(locationService, LocationRequestDTO.class));
         crud(app, "/families", new CrudController<>(familyService, FamilyRequestDTO.class));
@@ -52,6 +58,10 @@ public class Routes {
         crud(app, "/education-records", new CrudController<>(educationRecordService, EducationRecordRequestDTO.class));
         crud(app, "/jobs", new CrudController<>(jobService, JobRequestDTO.class));
         app.get("/locations/{id}/nearby", new NearbyPlacesController(nearbyPlacesService)::getNearby);
+        SeedController seedController = new SeedController(seedService);
+        app.addHttpHandler(HandlerType.POST, "/api/admin/seed/locations", seedController::seedLocations, Role.ADMIN);
+        app.addHttpHandler(HandlerType.POST, "/api/admin/seed/fake", seedController::seedFakeData, Role.ADMIN);
+        app.addHttpHandler(HandlerType.POST, "/api/admin/seed/enrich", seedController::enrich, Role.ADMIN);
     }
 
     private static void crud(Javalin app, String path, CrudController<?, ?> c) {

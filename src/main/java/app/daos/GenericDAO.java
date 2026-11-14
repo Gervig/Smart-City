@@ -24,12 +24,55 @@ public class GenericDAO<T> {
         }
     }
 
+    public void persistAll(List<T> entities) {
+        if (entities.isEmpty()) {
+            return;
+        }
+        try (EntityManager em = emf.createEntityManager()) {
+            var transaction = em.getTransaction();
+            transaction.begin();
+            try {
+                for (T entity : entities) {
+                    em.persist(entity);
+                }
+                transaction.commit();
+            } catch (RuntimeException | Error exception) {
+                if (transaction.isActive()) {
+                    transaction.rollback();
+                }
+                throw exception;
+            }
+        }
+    }
+
     public T merge(T entity) {
         try (EntityManager em = emf.createEntityManager()) {
             em.getTransaction().begin();
             T merged = em.merge(entity);
             em.getTransaction().commit();
             return merged;
+        }
+    }
+
+    public int mergeAllEntities(List<?> entities) {
+        if (entities.isEmpty()) {
+            return 0;
+        }
+        try (EntityManager em = emf.createEntityManager()) {
+            var transaction = em.getTransaction();
+            transaction.begin();
+            try {
+                for (Object entity : entities) {
+                    em.merge(entity);
+                }
+                transaction.commit();
+                return entities.size();
+            } catch (RuntimeException | Error exception) {
+                if (transaction.isActive()) {
+                    transaction.rollback();
+                }
+                throw exception;
+            }
         }
     }
 
@@ -49,6 +92,13 @@ public class GenericDAO<T> {
     public List<T> findAll() {
         try (EntityManager em = emf.createEntityManager()) {
             return em.createQuery("SELECT e FROM " + type.getSimpleName() + " e", type).getResultList();
+        }
+    }
+
+    public List<T> findAllWithLocation() {
+        try (EntityManager em = emf.createEntityManager()) {
+            return em.createQuery("SELECT e FROM " + type.getSimpleName() + " e JOIN FETCH e.location", type)
+                    .getResultList();
         }
     }
 
