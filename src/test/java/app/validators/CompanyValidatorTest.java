@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.NullSource;
 
 import java.time.LocalDate;
 
@@ -33,12 +34,14 @@ class CompanyValidatorTest
         assertDoesNotThrow(() -> CompanyValidator.validate(request));
     }
 
-    @Test
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", " "})
     @DisplayName("rejects a blank name")
-    void validateName()
+    void validateName(String name)
     {
         // Arrange
-        CompanyRequestDTO request = request(" ", LocalDate.now(), null, "active");
+        CompanyRequestDTO request = request(name, LocalDate.now(), null, "active");
 
         // Act
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
@@ -99,6 +102,23 @@ class CompanyValidatorTest
     {
         // Arrange
         CompanyRequestDTO request = request("Acme", LocalDate.now(), null, "closed");
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> CompanyValidator.validate(request));
+
+        // Assert
+        assertTrue(exception.getMessage().startsWith("status"));
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", " "})
+    @DisplayName("rejects a missing status")
+    void validateMissingStatus(String status)
+    {
+        // Arrange
+        CompanyRequestDTO request = request("Acme", LocalDate.now(), null, status);
 
         // Act
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,

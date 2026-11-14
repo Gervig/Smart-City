@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.NullSource;
 
 import java.time.LocalDate;
 
@@ -98,6 +99,23 @@ class CitizenRelationshipValidatorTest
     {
         // Arrange
         CitizenRelationshipRequestDTO request = request(1L, 2L, "friend", LocalDate.now(), null);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> CitizenRelationshipValidator.validate(request));
+
+        // Assert
+        assertTrue(exception.getMessage().startsWith("relationshipType"));
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", " "})
+    @DisplayName("rejects a missing relationship type")
+    void validateMissingRelationshipType(String type)
+    {
+        // Arrange
+        CitizenRelationshipRequestDTO request = request(1L, 2L, type, LocalDate.now(), null);
 
         // Act
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,

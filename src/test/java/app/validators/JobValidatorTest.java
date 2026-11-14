@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.NullSource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -66,12 +67,14 @@ class JobValidatorTest
         }
     }
 
-    @Test
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", " "})
     @DisplayName("rejects a blank title")
-    void validateTitle()
+    void validateTitle(String title)
     {
         // Arrange
-        JobRequestDTO request = request(1L, null, " ", BigDecimal.ZERO, LocalDate.now(), null, "active");
+        JobRequestDTO request = request(1L, null, title, BigDecimal.ZERO, LocalDate.now(), null, "active");
 
         // Act
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
@@ -158,6 +161,24 @@ class JobValidatorTest
         assertTrue(exception.getMessage().startsWith("status"));
     }
 
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", " "})
+    @DisplayName("rejects a missing status")
+    void validateMissingStatus(String status)
+    {
+        // Arrange
+        JobRequestDTO request = request(1L, null, "Engineer", BigDecimal.ZERO,
+                LocalDate.now(), null, status);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> JobValidator.validate(request));
+
+        // Assert
+        assertTrue(exception.getMessage().startsWith("status"));
+    }
+
     @Test
     @DisplayName("requires active jobs to have no end date")
     void validateActiveDates()
@@ -220,5 +241,17 @@ class JobValidatorTest
 
         // Assert
         assertEquals("A job cannot have both a company and an institution", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("accepts a job with only an institution")
+    void validateInstitutionEmployer()
+    {
+        // Arrange
+        JobRequestDTO request = request(null, 2L, "Teacher", BigDecimal.ZERO,
+                LocalDate.now(), null, "active");
+
+        // Act / Assert
+        assertDoesNotThrow(() -> JobValidator.validate(request));
     }
 }

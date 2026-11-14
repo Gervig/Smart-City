@@ -5,6 +5,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -52,5 +54,22 @@ class HousingValidatorTest
 
         // Assert
         assertTrue(exception.getMessage().startsWith(field));
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {" "})
+    @DisplayName("rejects null and blank housing types")
+    void validateMissingHousingType(String type)
+    {
+        // Arrange
+        HousingRequestDTO request = new HousingRequestDTO(1L, type, 1);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> HousingValidator.validate(request));
+
+        // Assert
+        assertTrue(exception.getMessage().startsWith("housingType"));
     }
 }

@@ -174,7 +174,8 @@ class CitizenValidatorTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"unknown", ""})
+    @NullSource
+    @ValueSource(strings = {"unknown", "", " "})
     @DisplayName("rejects an invalid status")
     void validateInvalidStatus(String status)
     {
@@ -235,5 +236,17 @@ class CitizenValidatorTest
 
         // Assert
         assertTrue(exception.getMessage().startsWith("housingId"));
+    }
+
+    @Test
+    @DisplayName("accepts a death date after birth")
+    void validateDeathDateAfterBirth()
+    {
+        // Arrange
+        LocalDate birthDate = LocalDate.now().minusYears(20);
+        CitizenRequestDTO request = request("Alex", "Smith", birthDate, birthDate.plusDays(1), "dead", null);
+
+        // Act / Assert
+        assertDoesNotThrow(() -> CitizenValidator.validate(request));
     }
 }

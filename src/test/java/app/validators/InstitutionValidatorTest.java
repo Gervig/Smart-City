@@ -70,4 +70,21 @@ class InstitutionValidatorTest
         // Assert
         assertTrue(exception.getMessage().startsWith("type"));
     }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", " "})
+    @DisplayName("rejects a missing institution type")
+    void validateMissingType(String type)
+    {
+        // Arrange
+        InstitutionRequestDTO request = new InstitutionRequestDTO(1L, "School", type);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> InstitutionValidator.validate(request));
+
+        // Assert
+        assertTrue(exception.getMessage().startsWith("type"));
+    }
 }

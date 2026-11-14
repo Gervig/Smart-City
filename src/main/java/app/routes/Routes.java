@@ -4,9 +4,14 @@ import app.controllers.CrudController;
 import app.daos.GenericDAO;
 import app.dtos.*;
 import app.entities.*;
+import app.controllers.NearbyPlacesController;
+import app.external.overpass.HttpOverpassClient;
 import app.services.*;
 import io.javalin.Javalin;
 import jakarta.persistence.EntityManagerFactory;
+
+import java.time.Clock;
+import java.time.Duration;
 
 public class Routes {
     public static void register(Javalin app, EntityManagerFactory emf) {
@@ -29,6 +34,13 @@ public class Routes {
         CompanyService companyService = new CompanyService(companyDAO, locationDAO);
         EducationRecordService educationRecordService = new EducationRecordService(educationRecordDAO, citizenDAO, institutionDAO);
         JobService jobService = new JobService(jobDAO, citizenDAO, companyDAO, institutionDAO);
+        String overpassUrl = System.getenv("OVERPASS_URL");
+        if (overpassUrl == null || overpassUrl.isBlank()) {
+            overpassUrl = HttpOverpassClient.DEFAULT_ENDPOINT_URL;
+        }
+        NearbyPlacesService nearbyPlacesService = new NearbyPlacesService(locationDAO,
+                new HttpOverpassClient(overpassUrl, Duration.ofSeconds(10)),
+                Clock.systemUTC());
 
         crud(app, "/locations", new CrudController<>(locationService, LocationRequestDTO.class));
         crud(app, "/families", new CrudController<>(familyService, FamilyRequestDTO.class));
@@ -39,6 +51,7 @@ public class Routes {
         crud(app, "/companies", new CrudController<>(companyService, CompanyRequestDTO.class));
         crud(app, "/education-records", new CrudController<>(educationRecordService, EducationRecordRequestDTO.class));
         crud(app, "/jobs", new CrudController<>(jobService, JobRequestDTO.class));
+        app.get("/locations/{id}/nearby", new NearbyPlacesController(nearbyPlacesService)::getNearby);
     }
 
     private static void crud(Javalin app, String path, CrudController<?, ?> c) {
