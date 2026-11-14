@@ -19,6 +19,7 @@ public class Location {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private String streetAddress;
 
     // OSM variables
     private String name;
@@ -28,7 +29,4 @@ public class Location {
     private Long osmId;
     @Column(name="osm_type")
     private String osmType;
-
-    // TODO: refactor address logic?
-    private String streetAddress;
 }
