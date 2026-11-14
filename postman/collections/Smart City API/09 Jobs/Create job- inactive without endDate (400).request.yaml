@@ -1,0 +1,35 @@
+$kind: http-request
+name: "Create job: inactive without endDate (400)"
+url: "{{baseUrl}}/jobs"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "citizenId": {{citizenId}},
+      "companyId": {{companyId}},
+      "institutionId": null,
+      "title": "Developer",
+      "salary": 35000,
+      "startDate": "2015-09-01",
+      "endDate": null,
+      "status": "inactive"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      pm.test("Response time is below 1500 ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+      pm.test("Error body has an error message", function () {
+          var json = pm.response.json();
+          pm.expect(json).to.have.property("error");
+          pm.expect(json.error).to.be.a("string").and.not.empty;
+      });
+    language: text/javascript
+order: 11000

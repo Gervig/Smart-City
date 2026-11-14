@@ -1,0 +1,6 @@
+name: Smart City - local
+values:
+  - key: baseUrl
+    value: 'http://localhost:7070'
+  - key: token
+    value: ''

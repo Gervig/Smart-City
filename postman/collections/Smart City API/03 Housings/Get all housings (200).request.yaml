@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/housings"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Response time is below 1500 ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+      pm.test("Body is a non-empty array", function () {
+          var json = pm.response.json();
+          pm.expect(json).to.be.an("array");
+          pm.expect(json.length).to.be.above(0);
+      });
+    language: text/javascript
+order: 2000
