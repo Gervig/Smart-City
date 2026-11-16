@@ -46,7 +46,7 @@ public class GenericDAO<T>
                     em.persist(entity);
                 }
                 transaction.commit();
-            } catch (RuntimeException | Error exception)
+            } catch (RuntimeException exception)
             {
                 if (transaction.isActive())
                 {
@@ -104,7 +104,7 @@ public class GenericDAO<T>
                 }
                 transaction.commit();
                 return merged;
-            } catch (RuntimeException | Error exception)
+            } catch (RuntimeException exception)
             {
                 // undo the whole batch if any single merge fails
                 if (transaction.isActive())
