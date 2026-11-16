@@ -48,6 +48,7 @@ public class GenericDAO<T>
                 transaction.commit();
             } catch (RuntimeException exception)
             {
+                // undo the whole batch if any single merge fails
                 if (transaction.isActive())
                 {
                     transaction.rollback();
