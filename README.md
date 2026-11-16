@@ -11,6 +11,7 @@ Smart City is a Java REST API for managing a simulated city: citizens, families,
 | Mapping and JSON | MapStruct, Jackson |
 | Unit tests | JUnit 5, Mockito, Hamcrest |
 | HTTP and database integration tests | WireMock, REST Assured, Testcontainers |
+| Static analysis | SonarQube Community Build (Docker) |
 | API examples | Postman |
 
 ## Contents
@@ -22,12 +23,13 @@ Smart City is a Java REST API for managing a simulated city: citizens, families,
 5. [Step 2: Database](#step-2-database)
 6. [Step 3: Backend](#step-3-backend)
 7. [Running the tests](#running-the-tests)
-8. [API tests with Postman](#api-tests-with-postman)
-9. [API reference](#api-reference)
-10. [Database design and SQL](#database-design-and-sql)
-11. [Continuous integration and delivery](#continuous-integration-and-delivery)
-12. [More documentation](#more-documentation)
-13. [Troubleshooting](#troubleshooting)
+8. [Static analysis with SonarQube](#static-analysis-with-sonarqube)
+9. [API tests with Postman](#api-tests-with-postman)
+10. [API reference](#api-reference)
+11. [Database design](#database-design)
+12. [Continuous integration and delivery](#continuous-integration-and-delivery)
+13. [More documentation](#more-documentation)
+14. [Troubleshooting](#troubleshooting)
 
 ## Quick start
 
@@ -185,7 +187,55 @@ mvn test -Dtest=OverpassLiveTest -Doverpass.live=true
 #### Screenshot of JaCoCo report
 ![docs/jacoco1.png](docs/jacoco1.png)
 
-app.security.rest contains controllers and routes and are therefor not covered in integration or unit test, just like the main routes and controllers. Those are covered with API tests in Postman.
+`app.security.rest` contains controllers and routes and is therefore not covered by unit or integration tests, just like the main routes and controllers. Those are covered by the API tests in Postman.
+
+## Static analysis with SonarQube
+
+SonarQube (Community Build) analyses the source code without running it and reports bugs, vulnerabilities, security hotspots, code smells and duplication. It also shows the JaCoCo coverage from the test run. The server runs locally in Docker; nothing is sent to the cloud.
+
+### Start the server
+
+Docker Desktop must be running.
+
+```text
+docker run -d --name sonarqube -p 9000:9000 sonarqube:community
+```
+
+Startup takes 1 to 2 minutes. Open <http://localhost:9000>. Later, start and stop the same container with `docker start sonarqube` and `docker stop sonarqube`; removing it (`docker rm`) deletes the project and its history.
+
+### First-time setup
+
+1. Log in with `admin` / `admin` and choose a new password. It is stored only in your own container.
+2. Create a local project with project key `smart-city` and choose **Use the global setting** for the new code definition.
+3. Choose **Locally**, generate a token and copy it. The token is shown once; never commit it or paste it into shared files.
+
+### Run an analysis
+
+First run the tests so JaCoCo writes `target/site/jacoco/jacoco.xml`, then run the Sonar scanner. Use the full plugin name, because the short name `sonar:sonar` is not known to Maven by default:
+
+```text
+mvn clean verify
+mvn org.sonarsource.scanner.maven:sonar-maven-plugin:5.9.0.7382:sonar "-Dsonar.projectKey=smart-city" "-Dsonar.host.url=http://localhost:9000" "-Dsonar.token=YOUR_TOKEN" "-Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml" "-Dsonar.coverage.exclusions=**/*MapperImpl.java"
+```
+
+- The quotes are needed in PowerShell. In IntelliJ's **Execute Maven Goal** dialog, leave out `mvn` and the quotes.
+- The scanner needs Java 21 and downloads its own runtime into `~/.sonar/cache` the first time, so the project itself stays on Java 17. If unpacking the runtime fails, delete that cache folder and run the command again.
+- The coverage exclusion leaves out the generated MapStruct classes, as in the JaCoCo configuration. The controllers, routes, `app.security.rest` and `Main` are tested through Postman, not unit tests; to leave them out of Sonar's coverage figure as well, add `**/controllers/**`, `**/routes/**`, `**/security/rest/**` and `**/Main.java` to `sonar.coverage.exclusions`, and state that choice in the report.
+- Commit your changes before an analysis. Sonar reads the blame data from git, and uncommitted files cause the warning "Missing blame information".
+- The Community Build analyses one branch (shown as `main` in the dashboard), whichever branch you have checked out.
+
+### Read the results
+
+Open <http://localhost:9000/dashboard?id=smart-city> and use the **Overall Code** tab.
+
+| Part | What it shows |
+|---|---|
+| Quality gate | Pass or fail against the default "Sonar way" conditions: no new issues, all new security hotspots reviewed, coverage of at least 80% and at most 3% duplication on new code |
+| Issues | Bugs, vulnerabilities and code smells. Open one to read why it matters and how to fix it |
+| Security Hotspots | Security-sensitive code that a person must review and mark as Safe or Fixed |
+| Measures | Coverage (from JaCoCo), duplication, complexity and ratings from A to E |
+
+A finding can be fixed, or set to **Accepted** or **False positive** with a comment explaining the decision. Run the analysis again after each round of fixes and compare the dashboards.
 
 ## API tests with Postman
 
@@ -534,4 +584,8 @@ No CI/CD workflow is currently checked into this repository. Before submitting c
 | `mvn verify` cannot start database tests | Start Docker Desktop and make sure Testcontainers can access its Docker engine. |
 | A protected request returns 401 | Log in and send the returned JWT in the `Authorization: Bearer ...` header. |
 | An admin seed request returns 403 | Create the admin account manually using `AdminPopulator`, then log in as `admin`. |
+| `mvn` is not recognized in PowerShell | Maven is not on your PATH. Run the goals from IntelliJ's Maven tool window (Execute Maven Goal), or install Maven. |
+| Sonar scanner says `No plugin found for prefix 'sonar'` | Use the full plugin name `org.sonarsource.scanner.maven:sonar-maven-plugin:5.9.0.7382:sonar`. |
+| Sonar scanner fails to extract the JRE or says Java 17 is not supported | The scanner needs Java 21. Delete `~/.sonar/cache` and run it again so it downloads its own runtime. |
+| Sonar warns about missing blame information | Commit your changes and run the analysis again. |
 | Overpass request fails or times out | The public service may be busy or rate-limiting requests. Retry later, or configure another compatible endpoint with `OVERPASS_URL`. |
