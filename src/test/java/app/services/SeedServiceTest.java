@@ -47,17 +47,28 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class SeedServiceTest
 {
-    @Mock private GenericDAO<Location> locationDAO;
-    @Mock private GenericDAO<Family> familyDAO;
-    @Mock private GenericDAO<Housing> housingDAO;
-    @Mock private GenericDAO<Citizen> citizenDAO;
-    @Mock private GenericDAO<Institution> institutionDAO;
-    @Mock private GenericDAO<Company> companyDAO;
-    @Mock private GenericDAO<EducationRecord> educationRecordDAO;
-    @Mock private GenericDAO<Job> jobDAO;
-    @Mock private GenericDAO<CitizenRelationship> citizenRelationshipDAO;
-    @Mock private OverpassImportClient overpassClient;
-    @Captor private ArgumentCaptor<List<Location>> locationsCaptor;
+    @Mock
+    private GenericDAO<Location> locationDAO;
+    @Mock
+    private GenericDAO<Family> familyDAO;
+    @Mock
+    private GenericDAO<Housing> housingDAO;
+    @Mock
+    private GenericDAO<Citizen> citizenDAO;
+    @Mock
+    private GenericDAO<Institution> institutionDAO;
+    @Mock
+    private GenericDAO<Company> companyDAO;
+    @Mock
+    private GenericDAO<EducationRecord> educationRecordDAO;
+    @Mock
+    private GenericDAO<Job> jobDAO;
+    @Mock
+    private GenericDAO<CitizenRelationship> citizenRelationshipDAO;
+    @Mock
+    private OverpassImportClient overpassClient;
+    @Captor
+    private ArgumentCaptor<List<Location>> locationsCaptor;
 
     private SeedService service;
 
@@ -67,7 +78,7 @@ class SeedServiceTest
         service = new SeedService(locationDAO, familyDAO, housingDAO, citizenDAO, institutionDAO, companyDAO,
                 educationRecordDAO, jobDAO, citizenRelationshipDAO, overpassClient, new Random(7));
         lenient().when(locationDAO.mergeAllEntities(anyList())).thenAnswer(invocation ->
-                ((List<?>) invocation.getArgument(0)).size());
+                invocation.getArgument(0));
     }
 
     @Test

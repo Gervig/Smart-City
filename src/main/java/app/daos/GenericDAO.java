@@ -4,6 +4,7 @@ import app.exceptions.NotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class GenericDAO<T> {
@@ -54,19 +55,20 @@ public class GenericDAO<T> {
         }
     }
 
-    public int mergeAllEntities(List<?> entities) {
+    public <T> List<T> mergeAllEntities(List<T> entities) {
         if (entities.isEmpty()) {
-            return 0;
+            return List.of();
         }
         try (EntityManager em = emf.createEntityManager()) {
             var transaction = em.getTransaction();
             transaction.begin();
             try {
-                for (Object entity : entities) {
-                    em.merge(entity);
+                List<T> merged = new ArrayList<>();
+                for (T entity : entities) {
+                    merged.add(em.merge(entity));
                 }
                 transaction.commit();
-                return entities.size();
+                return merged;
             } catch (RuntimeException | Error exception) {
                 if (transaction.isActive()) {
                     transaction.rollback();

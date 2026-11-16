@@ -243,9 +243,8 @@ public class SeedService
                             }
                         }
                     }
-                    updated += locationDAO.mergeAllEntities(changedEntities);
-                }
-                catch (OverpassException exception)
+                    updated += locationDAO.mergeAllEntities(changedEntities).size();
+                } catch (OverpassException exception)
                 {
                     return new SeedReport(Map.of("updated", updated), false,
                             "OSM enrichment stopped after " + updated + " updates: " + exception.getMessage());
@@ -265,12 +264,10 @@ public class SeedService
         if (entity instanceof Institution)
         {
             type = EntityType.INSTITUTION;
-        }
-        else if (entity instanceof Company)
+        } else if (entity instanceof Company)
         {
             type = EntityType.COMPANY;
-        }
-        else
+        } else
         {
             type = EntityType.HOUSING;
         }
@@ -397,8 +394,7 @@ public class SeedService
         {
             Integer parsed = value == null ? null : Integer.valueOf(value.trim());
             return parsed == null || parsed < 0 ? null : parsed;
-        }
-        catch (NumberFormatException exception)
+        } catch (NumberFormatException exception)
         {
             return null;
         }
@@ -410,8 +406,7 @@ public class SeedService
         {
             Double parsed = value == null ? null : Double.valueOf(value.trim());
             return parsed == null || !Double.isFinite(parsed) || parsed < 0 ? null : parsed;
-        }
-        catch (NumberFormatException exception)
+        } catch (NumberFormatException exception)
         {
             return null;
         }
