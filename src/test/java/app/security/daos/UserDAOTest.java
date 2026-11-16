@@ -15,24 +15,20 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mockito.Mockito;
 
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
  * Integration test: UserDAO against a real PostgreSQL started by Testcontainers (Docker must be running).
- * Maven runs the *DAOTest classes in the verify phase (see the pom), so `mvn test` stays fast and needs no Docker.
- * <p>
- * Every test starts from the same known data (see seed()), so the tests do not depend on each other
- * or on the order they run in:
- * alice / Password123 / roles: user
- * bob   / Password456 / roles: user, admin
- */
+ * Maven's Failsafe plugin runs every *Test class in a package named daos during `mvn verify`, so
+ * `mvn test` stays fast and needs no Docker.
+ **/
 class UserDAOTest
 {
     private static EntityManagerFactory emf;
@@ -111,9 +107,7 @@ class UserDAOTest
     @DisplayName("keeps the configured DAO when called with a null factory")
     void getInstanceNullFactory()
     {
-        // Arrange
-
-        // Act
+        // Arrange / Act
         UserDAO actual = UserDAO.getInstance(null);
 
         // Assert
@@ -126,7 +120,7 @@ class UserDAOTest
     void readAllFailure()
     {
         // Arrange
-        EntityManagerFactory failingEmf = Mockito.mock(EntityManagerFactory.class);
+        EntityManagerFactory failingEmf = mock(EntityManagerFactory.class);
         IllegalStateException cause = new IllegalStateException("Database unavailable");
         when(failingEmf.createEntityManager()).thenThrow(cause);
         UserDAO.getInstance(failingEmf);
@@ -275,16 +269,17 @@ class UserDAOTest
     void updateFailure()
     {
         // Arrange
-        EntityManagerFactory failingEmf = Mockito.mock(EntityManagerFactory.class);
+        EntityManagerFactory failingEmf = mock(EntityManagerFactory.class);
         IllegalStateException cause = new IllegalStateException("Database unavailable");
         when(failingEmf.createEntityManager()).thenThrow(cause);
         UserDAO.getInstance(failingEmf);
+        User carol = new User("carol", "Password789");
 
         // Act
         ApiException exception;
         try
         {
-            exception = assertThrows(ApiException.class, () -> userDAO.update(new User("carol", "Password789")));
+            exception = assertThrows(ApiException.class, () -> userDAO.update(carol));
         }
         finally
         {
