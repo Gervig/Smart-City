@@ -187,7 +187,7 @@ mvn test -Dtest=OverpassLiveTest -Doverpass.live=true
 #### Screenshot of JaCoCo report
 ![docs/jacoco1.png](docs/jacoco1.png)
 
-`app.security.rest` contains controllers and routes and is therefore not covered by unit or integration tests, just like the main routes and controllers. Those are covered by the API tests in Postman.
+`app.security.rest` contains controllers and routes and is therefore not covered by unit or integration tests, just like the main routes and controllers. Those are covered by the [API tests in Postman](#api-tests-with-postman).
 
 ## Static analysis with SonarQube
 
@@ -242,6 +242,10 @@ A finding can be fixed, or set to **Accepted** or **False positive** with a comm
 ![docs/sonarqube1.png](docs/sonarqube1.png)
 #### Example of an issue (GenericDAO mergeAllEntities)
 ![docs/sonarqube - mergeallentities1.png](docs/sonarqube%20-%20mergeallentities1.png)
+### Latest run
+![docs/sonarqube2.png](docs/sonarqube2.png)
+
+Code coverage doesn't match the real picture, code for controllers and routes have been excluded for SonarQube coverage to pass quality gate. For real picture of code coverage, see the [Screenshot of JaCoCo report](#screenshot-of-jacoco-report). 
 
 ## API tests with Postman
 
