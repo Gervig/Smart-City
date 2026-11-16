@@ -237,11 +237,17 @@ Open <http://localhost:9000/dashboard?id=smart-city> and use the **Overall Code*
 
 A finding can be fixed, or set to **Accepted** or **False positive** with a comment explaining the decision. Run the analysis again after each round of fixes and compare the dashboards.
 
+### SonarQube screenshots
+#### First run
+![docs/sonarqube1.png](docs/sonarqube1.png)
+#### Example of an issue (GenericDAO mergeAllEntities)
+![docs/sonarqube - mergeallentities1.png](docs/sonarqube%20-%20mergeallentities1.png)
+
 ## API tests with Postman
 
 Import `postman/SmartCity.postman_collection.json` and the local environment from `postman/SmartCity.local.postman_environment.json`. Set the environment's base URL to `http://localhost:7070`, start the application, and use the collection's auth requests to register or log in before calling protected routes. The collection includes CRUD, authentication, nearby-place, and cleanup requests.
 
-#### Screenshot of Postman collection run
+### Screenshot of Postman collection run
 ![docs/postman1.png](docs/postman1.png)
 
 ## API reference
