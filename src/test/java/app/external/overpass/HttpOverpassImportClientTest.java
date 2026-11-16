@@ -353,16 +353,22 @@ class HttpOverpassImportClientTest
     @DisplayName("rejects a null or unknown OSM type")
     void findByIdsInvalidOsmType(String osmType)
     {
-        // Arrange / Act / Assert
-        assertThrows(IllegalArgumentException.class, () -> client.findByIds(osmType, List.of(1L)));
+        // Arrange
+        List<Long> ids = List.of(1L);
+
+        // Act / Assert
+        assertThrows(IllegalArgumentException.class, () -> client.findByIds(osmType, ids));
     }
 
     @Test
     @DisplayName("rejects a zero id")
     void findByIdsZeroId()
     {
-        // Arrange / Act / Assert
-        assertThrows(IllegalArgumentException.class, () -> client.findByIds("node", List.of(0L)));
+        // Arrange
+        List<Long> ids = List.of(0L);
+
+        // Act / Assert
+        assertThrows(IllegalArgumentException.class, () -> client.findByIds("node", ids));
     }
 
     @Test

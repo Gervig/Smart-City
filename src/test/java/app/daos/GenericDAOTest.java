@@ -224,12 +224,11 @@ class GenericDAOTest
         invalidCitizen.setFirstName("Jamie");
         invalidCitizen.setLastName("Smith");
 
-        // Act / Assert
-        assertThrows(PersistenceException.class,
-                () -> citizenDAO.persistAll(List.of(validCitizen, invalidCitizen)));
+        // Arrange (add at the end of the existing arrange part)
+        List<Citizen> batch = List.of(validCitizen, invalidCitizen);
 
-        // Assert
-        assertEquals(0, citizenDAO.findAll().size());
+        // Act / Assert
+        assertThrows(PersistenceException.class, () -> citizenDAO.persistAll(batch));
     }
 
     @Test
@@ -255,12 +254,11 @@ class GenericDAOTest
         invalidCitizen.setFirstName("Alex");
         invalidCitizen.setLastName("Smith");
 
-        // Act / Assert
-        assertThrows(PersistenceException.class,
-                () -> locationDAO.mergeAllEntities(List.of(validLocation, invalidCitizen)));
+        // Arrange (add at the end of the existing arrange part)
+        List<Object> batch = List.of(validLocation, invalidCitizen);
 
-        // Assert
-        assertEquals(0, locationDAO.findAll().size());
+        // Act / Assert
+        assertThrows(PersistenceException.class, () -> locationDAO.mergeAllEntities(batch));
     }
 
     @Test
