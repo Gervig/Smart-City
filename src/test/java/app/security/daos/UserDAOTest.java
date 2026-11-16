@@ -15,12 +15,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.Mockito;
 
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
 /**
  * Integration test: UserDAO against a real PostgreSQL started by Testcontainers (Docker must be running).
@@ -105,6 +107,46 @@ class UserDAOTest
         assertEquals(Set.of("alice", "bob"), usernames);
     }
 
+    @Test
+    @DisplayName("keeps the configured DAO when called with a null factory")
+    void getInstanceNullFactory()
+    {
+        // Arrange
+
+        // Act
+        UserDAO actual = UserDAO.getInstance(null);
+
+        // Assert
+        assertSame(userDAO, actual);
+        assertEquals("alice", actual.read("alice").getUsername());
+    }
+
+    @Test
+    @DisplayName("wraps read-all failures in an API exception")
+    void readAllFailure()
+    {
+        // Arrange
+        EntityManagerFactory failingEmf = Mockito.mock(EntityManagerFactory.class);
+        IllegalStateException cause = new IllegalStateException("Database unavailable");
+        when(failingEmf.createEntityManager()).thenThrow(cause);
+        UserDAO.getInstance(failingEmf);
+
+        // Act
+        ApiException exception;
+        try
+        {
+            exception = assertThrows(ApiException.class, userDAO::readAll);
+        }
+        finally
+        {
+            UserDAO.getInstance(emf);
+        }
+
+        // Assert
+        assertEquals(401, exception.getCode());
+        assertSame(cause, exception.getCause());
+    }
+
     // ---------- create ----------
     // Each test reads the result back from the database. Checking the object that create() returns
     // proves nothing, because create() returns the same object it was given.
@@ -120,6 +162,27 @@ class UserDAOTest
         userDAO.create(carol);
 
         // Assert
+        assertEquals(Set.of("user"), rolesOf("carol"));
+    }
+
+    @Test
+    @DisplayName("creates the default user role when it is absent")
+    void createWithoutExistingDefaultRole()
+    {
+        // Arrange
+        try (EntityManager em = emf.createEntityManager())
+        {
+            em.getTransaction().begin();
+            em.createNativeQuery("TRUNCATE TABLE user_role, users, roles CASCADE").executeUpdate();
+            em.getTransaction().commit();
+        }
+        User carol = new User("carol", "Password789");
+
+        // Act
+        User returned = userDAO.create(carol);
+
+        // Assert
+        assertSame(carol, returned);
         assertEquals(Set.of("user"), rolesOf("carol"));
     }
 
@@ -147,12 +210,13 @@ class UserDAOTest
         eve.addRole(new Role("ghost")); // this role does not exist in the database
 
         // Act
-        userDAO.create(eve);
+        User returned = userDAO.create(eve);
 
         // Assert
         // NOTE: create() currently swallows the exception (catch Throwable + printStackTrace),
         // so the caller is never told that saving failed. If you change create() to let the
         // exception through, replace the act step with assertThrows(...).
+        assertSame(eve, returned);
         assertEquals(2, userDAO.readAll().size());
         assertThrows(ApiException.class, () -> userDAO.read("eve"));
     }
@@ -204,6 +268,32 @@ class UserDAOTest
 
         // Assert
         assertEquals(Set.of("user", "admin"), rolesOf("alice"));
+    }
+
+    @Test
+    @DisplayName("wraps update failures in an API exception")
+    void updateFailure()
+    {
+        // Arrange
+        EntityManagerFactory failingEmf = Mockito.mock(EntityManagerFactory.class);
+        IllegalStateException cause = new IllegalStateException("Database unavailable");
+        when(failingEmf.createEntityManager()).thenThrow(cause);
+        UserDAO.getInstance(failingEmf);
+
+        // Act
+        ApiException exception;
+        try
+        {
+            exception = assertThrows(ApiException.class, () -> userDAO.update(new User("carol", "Password789")));
+        }
+        finally
+        {
+            UserDAO.getInstance(emf);
+        }
+
+        // Assert
+        assertEquals(401, exception.getCode());
+        assertSame(cause, exception.getCause());
     }
 
     // ---------- delete ----------

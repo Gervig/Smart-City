@@ -12,6 +12,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -202,5 +204,70 @@ class GenericDAOTest
 
         // Act / Assert
         assertThrows(PersistenceException.class, () -> citizenDAO.persist(citizen));
+    }
+
+    @Test
+    @DisplayName("rolls back all entities when a batch persist fails")
+    void persistAllRollsBackOnFailure()
+    {
+        // Arrange
+        Family family = new Family();
+        family.setFamilyName("Smith");
+        familyDAO.persist(family);
+
+        Citizen validCitizen = new Citizen();
+        validCitizen.setFirstName("Alex");
+        validCitizen.setLastName("Smith");
+        validCitizen.setFamily(family);
+
+        Citizen invalidCitizen = new Citizen();
+        invalidCitizen.setFirstName("Jamie");
+        invalidCitizen.setLastName("Smith");
+
+        // Act / Assert
+        assertThrows(PersistenceException.class,
+                () -> citizenDAO.persistAll(List.of(validCitizen, invalidCitizen)));
+
+        // Assert
+        assertEquals(0, citizenDAO.findAll().size());
+    }
+
+    @Test
+    @DisplayName("returns an empty result for an empty merge batch")
+    void mergeAllEntitiesEmpty()
+    {
+        // Arrange
+
+        // Act
+        List<Location> merged = locationDAO.mergeAllEntities(List.of());
+
+        // Assert
+        assertEquals(0, merged.size());
+    }
+
+    @Test
+    @DisplayName("rolls back all entities when a batch merge fails")
+    void mergeAllEntitiesRollsBackOnFailure()
+    {
+        // Arrange
+        Location validLocation = location("Batch location");
+        Citizen invalidCitizen = new Citizen();
+        invalidCitizen.setFirstName("Alex");
+        invalidCitizen.setLastName("Smith");
+
+        // Act / Assert
+        assertThrows(PersistenceException.class,
+                () -> locationDAO.mergeAllEntities(List.of(validLocation, invalidCitizen)));
+
+        // Assert
+        assertEquals(0, locationDAO.findAll().size());
+    }
+
+    @Test
+    @DisplayName("rejects a null id when deleting")
+    void deleteNull()
+    {
+        // Arrange / Act / Assert
+        assertThrows(IllegalArgumentException.class, () -> locationDAO.delete(null));
     }
 }

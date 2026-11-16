@@ -17,9 +17,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.Captor;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
@@ -69,6 +69,8 @@ class SeedServiceTest
     private OverpassImportClient overpassClient;
     @Captor
     private ArgumentCaptor<List<Location>> locationsCaptor;
+    @Captor
+    private ArgumentCaptor<List<Citizen>> citizensCaptor;
 
     private SeedService service;
 
@@ -91,17 +93,68 @@ class SeedServiceTest
         when(overpassClient.findInArea(55.66, 12.55, 55.70, 12.62, "hospital", 20)).thenReturn(List.of(
                 element(1L, "node", "Duplicate", Map.of()),
                 element(2L, "way", "New Hospital", Map.of("addr:street", "Main Street", "addr:housenumber", "4")),
-                element(3L, "node", null, Map.of())));
+                element(3L, "node", null, Map.of()),
+                element(4L, "node", " ", Map.of())));
 
         // Act
         SeedReport report = service.seedLocationsFromOsm(55.66, 12.55, 55.70, 12.62, "hospital", 20);
 
         // Assert
         assertEquals(1, report.counts().get("imported"));
-        assertEquals(2, report.counts().get("skipped"));
+        assertEquals(3, report.counts().get("skipped"));
         verify(locationDAO).persistAll(locationsCaptor.capture());
         assertEquals("Main Street 4", locationsCaptor.getValue().get(0).getStreetAddress());
         assertEquals(2L, locationsCaptor.getValue().get(0).getOsmId());
+    }
+
+    @Test
+    @DisplayName("imports locations when existing rows have incomplete OSM identity")
+    void seedLocationsFromOsmIncompleteExistingIdentity()
+    {
+        // Arrange
+        Location missingId = new Location();
+        missingId.setOsmType("node");
+        Location missingType = new Location();
+        missingType.setOsmId(2L);
+        when(locationDAO.findAll()).thenReturn(List.of(missingId, missingType));
+        when(overpassClient.findInArea(55.66, 12.55, 55.70, 12.62, "hospital", 20)).thenReturn(List.of(
+                element(1L, "node", "First", Map.of()),
+                element(2L, "way", "Second", Map.of())));
+
+        // Act
+        SeedReport report = service.seedLocationsFromOsm(55.66, 12.55, 55.70, 12.62, "hospital", 20);
+
+        // Assert
+        assertEquals(2, report.counts().get("imported"));
+        assertEquals(0, report.counts().get("skipped"));
+        verify(locationDAO).persistAll(locationsCaptor.capture());
+        assertEquals(List.of(1L, 2L), locationsCaptor.getValue().stream().map(Location::getOsmId).toList());
+    }
+
+    @Test
+    @DisplayName("formats street addresses with optional streets and house numbers")
+    void seedLocationsFromOsmStreetAddress()
+    {
+        // Arrange
+        when(locationDAO.findAll()).thenReturn(List.of());
+        when(overpassClient.findInArea(55.66, 12.55, 55.70, 12.62, "hospital", 20)).thenReturn(List.of(
+                element(1L, "node", "No address", Map.of()),
+                element(2L, "node", "Number only", Map.of("addr:housenumber", "8")),
+                element(3L, "node", "Street only", Map.of("addr:street", "Main Street")),
+                element(4L, "node", "Blank address", Map.of("addr:street", " ", "addr:housenumber", " ")),
+                element(5L, "node", "Blank street", Map.of("addr:street", " ", "addr:housenumber", "9"))));
+
+        // Act
+        service.seedLocationsFromOsm(55.66, 12.55, 55.70, 12.62, "hospital", 20);
+
+        // Assert
+        verify(locationDAO).persistAll(locationsCaptor.capture());
+        List<Location> locations = locationsCaptor.getValue();
+        assertNull(locations.get(0).getStreetAddress());
+        assertEquals("8", locations.get(1).getStreetAddress());
+        assertEquals("Main Street", locations.get(2).getStreetAddress());
+        assertNull(locations.get(3).getStreetAddress());
+        assertEquals("9", locations.get(4).getStreetAddress());
     }
 
     @Test
@@ -127,6 +180,38 @@ class SeedServiceTest
 
         // Assert
         assertEquals("no locations: run the OSM import first", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("leaves citizens unhoused when all generated housing is full")
+    void seedFakeDataWhenHousingIsFull()
+    {
+        // Arrange
+        when(locationDAO.findAll()).thenReturn(List.of(location(1L, "node", "Central")));
+        Random alwaysFirstAndAlive = new Random(7)
+        {
+            @Override
+            public int nextInt(int bound)
+            {
+                return 0;
+            }
+
+            @Override
+            public boolean nextBoolean()
+            {
+                return false;
+            }
+        };
+        service = new SeedService(locationDAO, familyDAO, housingDAO, citizenDAO, institutionDAO, companyDAO,
+                educationRecordDAO, jobDAO, citizenRelationshipDAO, overpassClient, alwaysFirstAndAlive);
+
+        // Act
+        SeedReport report = service.seedFakeData(10, 42);
+
+        // Assert
+        assertTrue(report.completed());
+        verify(citizenDAO).persistAll(citizensCaptor.capture());
+        assertTrue(citizensCaptor.getValue().stream().anyMatch(citizen -> citizen.getHousing() == null));
     }
 
     @Test
@@ -207,6 +292,115 @@ class SeedServiceTest
         assertNull(housing.getNumberOfLevels());
         assertEquals(5, housing.getNumberOfFlats());
         assertNull(housing.getHeight());
+    }
+
+    @Test
+    @DisplayName("enriches company fields and skips unchanged or missing OSM elements")
+    void enrichFromOsmCompanies()
+    {
+        // Arrange
+        Company enriched = new Company();
+        enriched.setLocation(location(30L, "way", "Company"));
+        Company unchanged = new Company();
+        unchanged.setLocation(location(31L, "way", "Existing company"));
+        unchanged.setWebsite("existing.example");
+        Company missingElement = new Company();
+        missingElement.setLocation(location(32L, "way", "Not returned"));
+        when(institutionDAO.findAllWithLocation()).thenReturn(List.of());
+        when(companyDAO.findAllWithLocation()).thenReturn(List.of(enriched, unchanged, missingElement));
+        when(housingDAO.findAllWithLocation()).thenReturn(List.of());
+        when(overpassClient.findByIds("way", List.of(30L, 31L, 32L))).thenReturn(List.of(
+                element(30L, "way", "Company", Map.of(
+                        "contact:website", "company.example", "phone", "555-0100", "email", "info@example.test",
+                        "amenity", " ",
+                        "ref:DK:cvr", "12345678", "ref:DK:pnr", "87654321", "shop", "cafe",
+                        "opening_hours", "Mo-Fr 09:00-17:00")),
+                element(31L, "way", "Existing company", Map.of("opening_hours", " "))));
+
+        // Act
+        SeedReport report = service.enrichFromOsm();
+
+        // Assert
+        assertEquals(1, report.counts().get("updated"));
+        assertEquals("company.example", enriched.getWebsite());
+        assertEquals("555-0100", enriched.getPhone());
+        assertEquals("info@example.test", enriched.getEmail());
+        assertEquals("12345678", enriched.getCvrNumber());
+        assertEquals("87654321", enriched.getProductionUnitNumber());
+        assertEquals("cafe", enriched.getCategory());
+        assertEquals("Mo-Fr 09:00-17:00", enriched.getOpeningHours());
+        assertEquals("existing.example", unchanged.getWebsite());
+        verify(locationDAO).mergeAllEntities(anyList());
+    }
+
+    @Test
+    @DisplayName("ignores enrichment targets without complete OSM identity")
+    void enrichFromOsmMissingIdentity()
+    {
+        // Arrange
+        Institution noLocation = new Institution();
+        Company noId = new Company();
+        noId.setLocation(new Location());
+        Housing noType = new Housing();
+        noType.setLocation(location(40L, null, "Missing type"));
+        when(institutionDAO.findAllWithLocation()).thenReturn(List.of(noLocation));
+        when(companyDAO.findAllWithLocation()).thenReturn(List.of(noId));
+        when(housingDAO.findAllWithLocation()).thenReturn(List.of(noType));
+
+        // Act
+        SeedReport report = service.enrichFromOsm();
+
+        // Assert
+        assertTrue(report.completed());
+        assertEquals(0, report.counts().get("updated"));
+        verify(overpassClient, never()).findByIds(org.mockito.ArgumentMatchers.anyString(), anyList());
+    }
+
+    @Test
+    @DisplayName("parses valid and invalid housing measurements")
+    void enrichFromOsmHousingMeasurements()
+    {
+        // Arrange
+        Housing validMeasurements = new Housing();
+        validMeasurements.setLocation(location(50L, "way", "Valid"));
+        Housing invalidMeasurements = new Housing();
+        invalidMeasurements.setLocation(location(51L, "way", "Invalid"));
+        Housing missingMeasurements = new Housing();
+        missingMeasurements.setLocation(location(52L, "way", "Missing"));
+        Housing nonFiniteHeight = new Housing();
+        nonFiniteHeight.setLocation(location(54L, "way", "Non-finite"));
+        Housing existingMeasurements = new Housing();
+        existingMeasurements.setLocation(location(53L, "way", "Existing"));
+        existingMeasurements.setNumberOfLevels(7);
+        existingMeasurements.setNumberOfFlats(8);
+        existingMeasurements.setHeight(9.5);
+        when(institutionDAO.findAllWithLocation()).thenReturn(List.of());
+        when(companyDAO.findAllWithLocation()).thenReturn(List.of());
+        when(housingDAO.findAllWithLocation()).thenReturn(List.of(
+                validMeasurements, invalidMeasurements, missingMeasurements, existingMeasurements, nonFiniteHeight));
+        when(overpassClient.findByIds("way", List.of(50L, 51L, 52L, 53L, 54L))).thenReturn(List.of(
+                element(50L, "way", "Valid", Map.of("building:levels", "3", "building:flats", "6", "height", "12.5")),
+                element(51L, "way", "Invalid", Map.of("building:levels", "-1", "building:flats", "-2", "height", "-2.5")),
+                element(52L, "way", "Missing", Map.of()),
+                element(53L, "way", "Existing", Map.of("building:levels", "2", "building:flats", "4", "height", "5.5")),
+                element(54L, "way", "Non-finite", Map.of("height", "NaN"))));
+
+        // Act
+        SeedReport report = service.enrichFromOsm();
+
+        // Assert
+        assertEquals(1, report.counts().get("updated"));
+        assertEquals(3, validMeasurements.getNumberOfLevels());
+        assertEquals(6, validMeasurements.getNumberOfFlats());
+        assertEquals(12.5, validMeasurements.getHeight());
+        assertNull(invalidMeasurements.getNumberOfLevels());
+        assertNull(invalidMeasurements.getNumberOfFlats());
+        assertNull(invalidMeasurements.getHeight());
+        assertNull(missingMeasurements.getHeight());
+        assertEquals(7, existingMeasurements.getNumberOfLevels());
+        assertEquals(8, existingMeasurements.getNumberOfFlats());
+        assertEquals(9.5, existingMeasurements.getHeight());
+        assertNull(nonFiniteHeight.getHeight());
     }
 
     private Location location(long osmId, String osmType, String name)

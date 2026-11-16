@@ -17,7 +17,11 @@ public final class AdminPopulator
 
     public static void populate(EntityManagerFactory emf)
     {
-        String password = System.getenv("ADMIN_PASSWORD");
+        populate(emf, System.getenv("ADMIN_PASSWORD"));
+    }
+
+    public static void populate(EntityManagerFactory emf, String password)
+    {
         if (password == null)
         {
             return;

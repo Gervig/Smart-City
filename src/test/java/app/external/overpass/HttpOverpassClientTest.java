@@ -1,6 +1,7 @@
 package app.external.overpass;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.http.Fault;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,11 +10,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -130,6 +131,25 @@ class HttpOverpassClientTest
     }
 
     @Test
+    @DisplayName("skips a place with a blank name")
+    void findNearbySkipsBlankName()
+    {
+        // Arrange
+        server.stubFor(post(urlEqualTo("/api/interpreter"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {"elements":[{"type":"node","lat":55.69,"lon":12.58,
+                                 "tags":{"name":"   ","amenity":7}}]}
+                                """)));
+
+        // Act
+        List<NearbyPlace> result = client.findNearby(55.6761, 12.5683, 500, "hospital");
+
+        // Assert
+        assertEquals(List.of(), result);
+    }
+
+    @Test
     @DisplayName("returns an empty list when there are no elements")
     void findNearbyEmpty()
     {
@@ -178,6 +198,20 @@ class HttpOverpassClientTest
         // Arrange
         server.stubFor(post(urlEqualTo("/api/interpreter"))
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody("{\"version\":0.6}")));
+
+        // Act / Assert
+        assertThrows(OverpassException.class,
+                () -> client.findNearby(55.6761, 12.5683, 500, "hospital"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "{\"elements\":{}}"})
+    @DisplayName("rejects a null or non-array elements response")
+    void findNearbyInvalidElements(String responseBody)
+    {
+        // Arrange
+        server.stubFor(post(urlEqualTo("/api/interpreter"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(responseBody)));
 
         // Act / Assert
         assertThrows(OverpassException.class,
@@ -237,5 +271,43 @@ class HttpOverpassClientTest
         // Assert
         assertEquals(0, exception.getStatusCode());
         assertFalse(exception.isTimeout());
+    }
+
+    @Test
+    @DisplayName("converts a failed connection into OverpassException")
+    void findNearbyConnectionFailure()
+    {
+        // Arrange
+        server.stubFor(post(urlEqualTo("/api/interpreter"))
+                .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
+
+        // Act
+        OverpassException exception = assertThrows(OverpassException.class,
+                () -> client.findNearby(55.6761, 12.5683, 500, "hospital"));
+
+        // Assert
+        assertEquals(0, exception.getStatusCode());
+        assertFalse(exception.isTimeout());
+    }
+
+    @Test
+    @DisplayName("restores the interrupt flag after an interrupted request")
+    void findNearbyInterrupted()
+    {
+        // Arrange
+        Thread.currentThread().interrupt();
+
+        // Act / Assert
+        try
+        {
+            assertThrows(OverpassException.class,
+                    () -> client.findNearby(55.6761, 12.5683, 500, "hospital"));
+            assertTrue(Thread.currentThread().isInterrupted());
+        }
+        finally
+        {
+            boolean interrupted = Thread.interrupted();
+            assertTrue(interrupted);
+        }
     }
 }
