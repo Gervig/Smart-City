@@ -88,9 +88,10 @@ test.describe('Authentication', () =>
     await expect(page).toHaveURL(/\/login$/)
   })
 
-  test('a corrupted token logs the user out instead of showing a server error', async ({ page }) =>
+  test('a 401 from the API logs the user out and returns to the login page', async ({ page }) =>
   {
-    await page.addInitScript(() => localStorage.setItem('smartcity.auth', JSON.stringify({ token: 'garbage', username: 'x' })))
+    await page.addInitScript(() => localStorage.setItem('smartcity.auth', JSON.stringify({ token: 'expired', username: 'x' })))
+    await page.route('**/backend/families', (route) => route.fulfill({ status: 401, body: 'Unauthorized' }))
 
     await page.goto('/families')
 

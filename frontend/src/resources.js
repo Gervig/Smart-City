@@ -68,9 +68,21 @@ export function toPayload(resource, form)
   return body
 }
 
+// Jackson may serialise LocalDate as [yyyy, m, d]. Show and edit it as yyyy-mm-dd either way.
+export function formatValue(field, value)
+{
+  if (value === null || value === undefined) return ''
+  if (field.type === 'date' && Array.isArray(value) && value.length === 3)
+  {
+    const [y, m, d] = value
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+  }
+  return value
+}
+
 export function fromRecord(resource, record)
 {
   const form = {}
-  for (const f of resource.fields) form[f.name] = record[f.name] ?? ''
+  for (const f of resource.fields) form[f.name] = formatValue(f, record[f.name])
   return form
 }

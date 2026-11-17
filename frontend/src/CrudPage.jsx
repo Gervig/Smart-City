@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { request } from './api.js'
 import { useAuth } from './auth.jsx'
-import { emptyForm, fromRecord, toPayload } from './resources.js'
+import { emptyForm, formatValue, fromRecord, toPayload } from './resources.js'
 
 export default function CrudPage({ resource }) {
   const { token, logout } = useAuth()
@@ -147,7 +147,7 @@ export default function CrudPage({ resource }) {
             {rows.map((row) => (
               <tr key={row.id} data-testid="row">
                 <td>{row.id}</td>
-                {resource.fields.map((f) => <td key={f.name}>{row[f.name] ?? ''}</td>)}
+                {resource.fields.map((f) => <td key={f.name}>{formatValue(f, row[f.name])}</td>)}
                 <td className="row-actions">
                   <button type="button" className="secondary" onClick={() => edit(row)} data-testid="edit">Edit</button>
                   <button type="button" className="danger" onClick={() => remove(row.id)} data-testid="delete">Delete</button>
