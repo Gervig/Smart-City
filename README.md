@@ -13,6 +13,8 @@ Smart City is a Java REST API for managing a simulated city: citizens, families,
 | HTTP and database integration tests | WireMock, REST Assured, Testcontainers |
 | Static analysis | SonarQube Community Build (Docker) |
 | API examples | Postman |
+| Frontend (demo UI) | Vite, React 18, JavaScript |
+| End-to-end UI tests | Playwright |
 
 ## Contents
 
@@ -25,11 +27,13 @@ Smart City is a Java REST API for managing a simulated city: citizens, families,
 7. [Running the tests](#running-the-tests)
 8. [Static analysis with SonarQube](#static-analysis-with-sonarqube)
 9. [API tests with Postman](#api-tests-with-postman)
-10. [API reference](#api-reference)
-11. [Database design](#database-design)
-12. [Continuous integration and delivery](#continuous-integration-and-delivery)
-13. [More documentation](#more-documentation)
-14. [Troubleshooting](#troubleshooting)
+10. [Frontend demo](#frontend-demo)
+11. [End-to-end tests with Playwright](#end-to-end-tests-with-playwright)
+12. [API reference](#api-reference)
+13. [Database design](#database-design)
+14. [Continuous integration and delivery](#continuous-integration-and-delivery)
+15. [More documentation](#more-documentation)
+16. [Troubleshooting](#troubleshooting)
 
 ## Quick start
 
@@ -78,6 +82,11 @@ Smart-City/
 |-- SQL/                           PostgreSQL schema, routines, triggers, views, and event
 |-- docs/                          SRS, assignment information, plans, and ERD diagrams
 |-- postman/                       API collection and local environment
+|-- frontend/                      Vite + React demo UI and Playwright E2E tests
+|   |-- src/                       React app (pages, API helper, resource definitions)
+|   |-- e2e/                       Playwright tests (auth.spec.js, crud.spec.js)
+|   |-- vite.config.js             Dev server and proxy to the backend
+|   `-- playwright.config.js       Test configuration
 `-- pom.xml                        Dependencies, build, and test configuration
 ```
 
@@ -91,6 +100,7 @@ Smart-City/
 | PostgreSQL | Supported PostgreSQL version | Local application database |
 | Docker Desktop | Recent version | Testcontainers database integration tests |
 | Postman | Optional | Running the checked-in API collection |
+| Node.js and npm | Node 20 or newer | Frontend demo and Playwright tests |
 
 Check your installations:
 
@@ -99,6 +109,8 @@ git --version
 java -version
 mvn --version
 docker --version
+node --version
+npm --version
 ```
 
 ## Step 1: Get the code
@@ -245,7 +257,7 @@ A finding can be fixed, or set to **Accepted** or **False positive** with a comm
 ### Latest run
 ![docs/sonarqube2.png](docs/sonarqube2.png)
 
-Code coverage doesn't match the real picture, code for controllers and routes have been excluded for SonarQube coverage to pass quality gate. For real picture of code coverage, see the [Screenshot of JaCoCo report](#screenshot-of-jacoco-report). 
+Code coverage doesn't match the real picture, code for controllers and routes have been excluded for SonarQube coverage to pass quality gate. For real picture of code coverage, see the [Screenshot of JaCoCo report](#screenshot-of-jacoco-report).
 
 ## API tests with Postman
 
@@ -253,6 +265,103 @@ Import `postman/SmartCity.postman_collection.json` and the local environment fro
 
 ### Screenshot of Postman collection run
 ![docs/postman1.png](docs/postman1.png)
+
+## Frontend demo
+
+`frontend/` is a small Vite + React (JavaScript) app that demonstrates the API in a browser and is the system under test for the Playwright tests. It has pages to register, log in and log out, one CRUD page each for families, locations, housings and citizens, and a nearby-places page that calls `GET /locations/{id}/nearby`.
+
+Start the backend first (port 7070, database running), then in a second terminal:
+
+```text
+cd frontend
+npm install
+npm run dev
+```
+
+The app is served on <http://localhost:5173>.
+
+### How the frontend reaches the API
+
+The backend has no CORS configuration, so the browser never calls it directly. Every request goes to `/backend/...` on the Vite dev server, which forwards it to `http://localhost:7070` and removes the `/backend` prefix (see `frontend/vite.config.js`). The backend therefore needs no changes. To point the frontend at another API, set `VITE_API_TARGET` before `npm run dev`.
+
+### How it is built
+
+| File | Purpose |
+|---|---|
+| `src/api.js` | One `request` helper; turns the API's error bodies (`{"error": ...}` and `{"msg": ...}`) into readable messages |
+| `src/auth.jsx` | Login, register and logout; keeps the JWT in `localStorage` under `smartcity.auth` so a reload stays logged in |
+| `src/resources.js` | Describes each CRUD resource (path, fields, types). Adding an entry creates a new page |
+| `src/CrudPage.jsx` | Generic table and create/edit/delete form driven by `resources.js` |
+| `src/NearbyPage.jsx` | Form and result list for nearby places |
+
+Notes:
+
+- A `401` from the API logs the user out and returns to the login page.
+- Dates from the API may arrive as `[year, month, day]` arrays; the frontend shows them as `yyyy-mm-dd`.
+- The CRUD routes have no route roles on the server (see [API reference](#api-reference)), so the login redirect is a frontend convenience, not access control.
+- Elements carry `data-testid` attributes that the tests use as selectors.
+
+## End-to-end tests with Playwright
+
+The Playwright tests drive the real UI in Chromium against the real backend and database. They are written in code (`frontend/e2e/`) and are not recorded.
+
+### Run the tests
+
+1. Start PostgreSQL and the backend on port 7070.
+2. In `frontend/`:
+
+```text
+npm install
+npx playwright install chromium
+npm run e2e
+```
+
+Playwright starts the Vite dev server itself, or reuses one that is already running on port 5173. Other useful commands:
+
+| Command | Effect |
+|---|---|
+| `npm run e2e` | Run all tests headless; prints a list and writes an HTML report |
+| `npm run e2e:headed` | Run with a visible browser |
+| `npm run e2e:ui` | Open Playwright's UI mode to step through tests |
+| `npm run e2e:report` | Open the last HTML report (screenshots and traces of failures) |
+| `npx playwright test e2e/auth.spec.js` | Run one file |
+| `npx playwright test -g "wrong password"` | Run tests whose name matches |
+
+Tests run one at a time (`workers: 1`) because they share one database. Each test creates its own user with a unique name, so the suite can be repeated without cleaning the database. The tests create and delete families, locations, housings and citizens; use a development database.
+
+### What is tested
+
+| File | Test | Type |
+|---|---|---|
+| `auth.spec.js` | Unauthenticated visitor is redirected to login | Negative |
+| | Register a new user and land on the app | Positive |
+| | Log in as an existing user | Positive |
+| | Wrong password shows an error | Negative |
+| | Unknown user cannot log in | Negative |
+| | Empty login form is rejected | Negative |
+| | Logout returns to login and blocks protected pages | Positive |
+| | A `401` from the API logs the user out | Negative |
+| `crud.spec.js` | Create, edit and delete a family | Positive |
+| | Family without a name is rejected | Negative |
+| | Create a location and a housing that points to it | Positive |
+| | Housing with capacity 0 is rejected | Negative (boundary) |
+| | Create a citizen linked to a family | Positive |
+| | Citizen born in the future is rejected | Negative |
+| | Alive citizen with a death date is rejected | Negative |
+| | Citizen without a first name is rejected | Negative |
+| | Nearby places show results (Overpass response stubbed with `page.route`) | Positive |
+| | Unknown location shows an error | Negative |
+
+The negative tests assert the validation messages from `src/main/java/app/validators/`. If a message is reworded in the backend, update the matching test.
+
+### Design choices
+
+- Tests sign in through the API and put the token in `localStorage` (`signIn` in `e2e/helpers.js`), so they start on the page under test instead of repeating the login form. Only `auth.spec.js` uses the login form.
+- The nearby-places success test stubs the response, so the suite does not depend on the public Overpass service. The backend's own Overpass behaviour is covered by the WireMock tests and the opt-in `OverpassLiveTest`.
+- Static analysis and JaCoCo coverage cover the backend only. The frontend is covered by these end-to-end tests.
+
+### Screenshot of Playwright report
+![docs/playwright1.png](docs/playwright1.png)
 
 ## API reference
 
@@ -573,7 +682,7 @@ The three models represent different levels of detail of the same Smart City dom
 
 ## Continuous integration and delivery
 
-No CI/CD workflow is currently checked into this repository. Before submitting changes, run `mvn clean verify`; this runs the Surefire tests and, with Docker available, the PostgreSQL-backed Failsafe tests.
+No CI/CD workflow is currently checked into this repository. Before submitting changes, run `mvn clean verify`; this runs the Surefire tests and, with Docker available, the PostgreSQL-backed Failsafe tests. The Playwright tests are run separately with `npm run e2e` in `frontend/` while the backend is running.
 
 ## More documentation
 
@@ -582,6 +691,7 @@ No CI/CD workflow is currently checked into this repository. Before submitting c
 - [Exam assignment description](docs/Exam_Assignment_Description.md)
 - [Exam information](docs/Exam_Information.md)
 - [Postman collection](postman/SmartCity.postman_collection.json)
+- [Playwright tests](frontend/e2e/)
 - [Overpass API documentation](https://wiki.openstreetmap.org/wiki/Overpass_API)
 
 ## Troubleshooting
@@ -598,4 +708,8 @@ No CI/CD workflow is currently checked into this repository. Before submitting c
 | Sonar scanner says `No plugin found for prefix 'sonar'` | Use the full plugin name `org.sonarsource.scanner.maven:sonar-maven-plugin:5.9.0.7382:sonar`. |
 | Sonar scanner fails to extract the JRE or says Java 17 is not supported | The scanner needs Java 21. Delete `~/.sonar/cache` and run it again so it downloads its own runtime. |
 | Sonar warns about missing blame information | Commit your changes and run the analysis again. |
+| `npm run e2e` fails with "Executable doesn't exist" | Run `npx playwright install chromium` in `frontend/`. |
+| Frontend pages show "Cannot reach the server" or a 500 error | The backend is not running on port 7070, or `VITE_API_TARGET` points elsewhere. |
+| Port 5173 is already in use | Stop the other Vite process; the dev server is configured with `strictPort`. |
+| Playwright tests time out waiting for the page | Check that the backend is up and that the database has been created. |
 | Overpass request fails or times out | The public service may be busy or rate-limiting requests. Retry later, or configure another compatible endpoint with `OVERPASS_URL`. |
