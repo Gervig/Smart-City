@@ -19,6 +19,29 @@ public final class Check {
         }
     }
 
+    // [CHANGED] Added max-length check to reject overly long string inputs
+    public static void requireMaxLength(String field, String value, int maxLength) {
+        if (maxLength < 1) {
+            throw new IllegalArgumentException("maxLength must be positive");
+        }
+        if (value != null && value.length() > maxLength) {
+            throw new IllegalArgumentException(field + " must be at most " + maxLength + " characters");
+        }
+    }
+
+    // [CHANGED] Added control-character check to block ASCII control chars (0x00-0x1F) and DEL (0x7F)
+    public static void requireNoControlChars(String field, String value) {
+        if (value == null) {
+            return;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            if (ch < 0x20 || ch == 0x7F) {
+                throw new IllegalArgumentException(field + " must not contain control characters");
+            }
+        }
+    }
+
     public static void requireOneOf(String field, String value, String... allowed) {
         requireText(field, value);
         if (!Arrays.asList(allowed).contains(value)) {

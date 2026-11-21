@@ -16,11 +16,13 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects; // [CHANGED] Added for null checks in constructor
 import java.util.Set;
 
 public class HttpOverpassClient implements OverpassClient, OverpassImportClient {
     public static final String DEFAULT_ENDPOINT_URL = "https://overpass-api.de/api/interpreter";
     public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
+    private static final int MAX_RADIUS_METERS = 5000; // [CHANGED] Upper bound for radiusMeters in findNearby
 
     private final String endpointUrl;
     private final Duration timeout;
@@ -30,7 +32,8 @@ public class HttpOverpassClient implements OverpassClient, OverpassImportClient 
     private long accumulatedSleepNanos;
     private long lastRequestNanos;
 
-    private static final Set<String> IMPORT_AMENITIES = Set.of(
+    // [CHANGED] Renamed from IMPORT_AMENITIES so both findNearby and findInArea use the same allow-list
+    private static final Set<String> ALLOWED_AMENITIES = Set.of(
             "hospital", "school", "college", "pharmacy", "restaurant", "cafe", "library", "bank");
 
     public HttpOverpassClient(String endpointUrl, Duration timeout) {
@@ -38,14 +41,23 @@ public class HttpOverpassClient implements OverpassClient, OverpassImportClient 
     }
 
     public HttpOverpassClient(String endpointUrl, Duration timeout, Sleeper sleeper) {
-        this.endpointUrl = endpointUrl;
-        this.timeout = timeout;
-        this.sleeper = sleeper;
+        // [CHANGED] Validate endpointUrl format/scheme/host and require non-null timeout and sleeper
+        this.endpointUrl = validateEndpointUrl(endpointUrl);
+        this.timeout = Objects.requireNonNull(timeout, "timeout is required");
+        this.sleeper = Objects.requireNonNull(sleeper, "sleeper is required");
         this.httpClient = HttpClient.newBuilder().connectTimeout(timeout).build();
     }
 
     @Override
     public List<NearbyPlace> findNearby(double latitude, double longitude, int radiusMeters, String amenity) {
+        // [CHANGED] Validate coordinates, radius range, and amenity before building Overpass QL
+        validateLatitude(latitude, "latitude");
+        validateLongitude(longitude, "longitude");
+        if (radiusMeters < 1 || radiusMeters > MAX_RADIUS_METERS) {
+            throw new IllegalArgumentException("radiusMeters must be between 1 and " + MAX_RADIUS_METERS);
+        }
+        validateAmenity(amenity);
+
         long timeoutSeconds = Math.max(1, timeout.getSeconds() + (timeout.getNano() == 0 ? 0 : 1));
         String query = "[out:json][timeout:" + timeoutSeconds + "];nwr(around:" + radiusMeters + "," + latitude + "," + longitude
                 + ")[amenity=" + amenity + "];out center tags 20;";
@@ -84,9 +96,15 @@ public class HttpOverpassClient implements OverpassClient, OverpassImportClient 
 
     @Override
     public List<OsmElement> findInArea(double south, double west, double north, double east, String amenity, int limit) {
-        if (amenity == null || !IMPORT_AMENITIES.contains(amenity)) {
-            throw new IllegalArgumentException("amenity is not supported");
+        // [CHANGED] Validate bounding-box coordinates, south <= north ordering, and amenity allow-list
+        validateLatitude(south, "south");
+        validateLatitude(north, "north");
+        validateLongitude(west, "west");
+        validateLongitude(east, "east");
+        if (south > north) {
+            throw new IllegalArgumentException("south must not be greater than north");
         }
+        validateAmenity(amenity);
         if (limit < 1 || limit > 200) {
             throw new IllegalArgumentException("limit must be between 1 and 200");
         }
@@ -111,6 +129,41 @@ public class HttpOverpassClient implements OverpassClient, OverpassImportClient 
         String joinedIds = String.join(",", ids.stream().map(String::valueOf).toList());
         String query = "[out:json][timeout:60];" + osmType + "(id:" + joinedIds + ");out center tags;";
         return parseOsmElements(sendImportQuery(query));
+    }
+
+    // [CHANGED] New helper to enforce ALLOWED_AMENITIES consistently
+    private void validateAmenity(String amenity) {
+        if (amenity == null || !ALLOWED_AMENITIES.contains(amenity)) {
+            throw new IllegalArgumentException("amenity is not supported");
+        }
+    }
+
+    // [CHANGED] New helper to ensure latitude is finite and within [-90, 90]
+    private void validateLatitude(double value, String name) {
+        if (!Double.isFinite(value) || value < -90.0 || value > 90.0) {
+            throw new IllegalArgumentException(name + " must be a finite number between -90 and 90");
+        }
+    }
+
+    // [CHANGED] New helper to ensure longitude is finite and within [-180, 180]
+    private void validateLongitude(double value, String name) {
+        if (!Double.isFinite(value) || value < -180.0 || value > 180.0) {
+            throw new IllegalArgumentException(name + " must be a finite number between -180 and 180");
+        }
+    }
+
+    // [CHANGED] New helper to require a non-blank HTTP/HTTPS URI with a host
+    private static String validateEndpointUrl(String endpointUrl) {
+        if (endpointUrl == null || endpointUrl.isBlank()) {
+            throw new IllegalArgumentException("endpointUrl is required");
+        }
+        URI uri = URI.create(endpointUrl.trim());
+        String scheme = uri.getScheme();
+        if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))
+                || uri.getHost() == null || uri.getHost().isBlank()) {
+            throw new IllegalArgumentException("endpointUrl must be a valid http or https URL");
+        }
+        return uri.toString();
     }
 
     private String sendImportQuery(String query) {

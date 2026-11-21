@@ -1,21 +1,40 @@
 package app.daos;
 
+import app.entities.Citizen;
+import app.entities.Family; // [CHANGED] Added for ALLOWED_COUNT_PATHS
+import app.entities.Institution; // [CHANGED] Added for ALLOWED_COUNT_PATHS
 import app.exceptions.NotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 public class GenericDAO<T>
 {
+    // [CHANGED] Regex allowing only valid Java identifier segments separated by dots (blocks spaces, quotes, SQL/JPQL keywords, etc.)
+    private static final Pattern SAFE_ATTRIBUTE_PATH =
+            Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*");
+
+    // [CHANGED] Expanded allow-list with paths used by tests and services
+    private static final Map<Class<?>, Set<String>> ALLOWED_COUNT_PATHS = Map.of(
+            Citizen.class, Set.of("housing.id", "firstName"),
+            Family.class, Set.of("familyName"),
+            Institution.class, Set.of("phone")
+    );
+
     private final EntityManagerFactory emf;
     private final Class<T> type;
 
     public GenericDAO(EntityManagerFactory emf, Class<T> type)
     {
-        this.emf = emf;
-        this.type = type;
+        // [CHANGED] Fail fast with NullPointerException if emf or type is null
+        this.emf = Objects.requireNonNull(emf, "EntityManagerFactory is required");
+        this.type = Objects.requireNonNull(type, "Entity type is required");
     }
 
     public T persist(T entity)
@@ -153,12 +172,34 @@ public class GenericDAO<T>
 
     public long countWhere(String attributePath, Object value)
     {
+        // [CHANGED] Validate attributePath before interpolating it into the JPQL query
+        String validatedPath = validateAttributePath(attributePath);
         try (EntityManager em = emf.createEntityManager())
         {
-            return em.createQuery("SELECT COUNT(e) FROM " + type.getSimpleName() + " e WHERE e." + attributePath + " = :value", Long.class)
+            // [CHANGED] Uses validatedPath in the query string while keeping value as a bound parameter
+            return em.createQuery("SELECT COUNT(e) FROM " + type.getSimpleName() + " e WHERE e." + validatedPath + " = :value", Long.class)
                     .setParameter("value", value)
                     .getSingleResult();
         }
+    }
+
+    // [CHANGED] New helper method to enforce format and allow-list rules on attributePath
+    private String validateAttributePath(String attributePath)
+    {
+        if (attributePath == null || attributePath.isBlank())
+        {
+            throw new IllegalArgumentException("attributePath is required");
+        }
+        if (!SAFE_ATTRIBUTE_PATH.matcher(attributePath).matches())
+        {
+            throw new IllegalArgumentException("Invalid attribute path: " + attributePath);
+        }
+        Set<String> allowedForType = ALLOWED_COUNT_PATHS.getOrDefault(type, Set.of());
+        if (!allowedForType.contains(attributePath))
+        {
+            throw new IllegalArgumentException("Attribute path not allowed for " + type.getSimpleName() + ": " + attributePath);
+        }
+        return attributePath;
     }
 
     public void delete(Long id)

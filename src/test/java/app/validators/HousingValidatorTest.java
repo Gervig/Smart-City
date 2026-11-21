@@ -40,8 +40,9 @@ class HousingValidatorTest
         assertDoesNotThrow(() -> HousingValidator.validate(request));
     }
 
+    // [CHANGED] Added capacity above MAX_CAPACITY (10001) to cover the upper-bound rejection branch
     @ParameterizedTest
-    @CsvSource({"house,0,capacity", "house,-1,capacity", "villa,1,housingType", "'',1,housingType"})
+    @CsvSource({"house,0,capacity", "house,-1,capacity", "house,10001,capacity", "villa,1,housingType", "'',1,housingType"})
     @DisplayName("rejects invalid type or capacity")
     void validateInvalidValues(String type, int capacity, String field)
     {

@@ -8,6 +8,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
@@ -57,6 +59,38 @@ class HttpOverpassClientTest
     {
         server.resetAll();
         client = new HttpOverpassClient(server.baseUrl() + "/api/interpreter", Duration.ofSeconds(2));
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "   ", "ftp://example.com/api", "http://", "http:///api", "not a uri"})
+    @DisplayName("rejects invalid endpoint URLs in constructor")
+    void constructorInvalidEndpointUrl(String url)
+    {
+        // Arrange / Act / Assert
+        assertThrows(IllegalArgumentException.class,
+                () -> new HttpOverpassClient(url, Duration.ofSeconds(2)));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "NaN, 12.5683, 500, hospital",
+            "90.1, 12.5683, 500, hospital",
+            "-90.1, 12.5683, 500, hospital",
+            "55.6761, Infinity, 500, hospital",
+            "55.6761, 180.1, 500, hospital",
+            "55.6761, -180.1, 500, hospital",
+            "55.6761, 12.5683, 0, hospital",
+            "55.6761, 12.5683, 5001, hospital",
+            "55.6761, 12.5683, 500, invalid_amenity"
+    })
+    @DisplayName("rejects invalid coordinates, radius, or amenity before making a request")
+    void findNearbyInvalidArguments(double lat, double lon, int radius, String amenity)
+    {
+        // Arrange / Act / Assert
+        assertThrows(IllegalArgumentException.class,
+                () -> client.findNearby(lat, lon, radius, amenity));
+        server.verify(0, postRequestedFor(urlEqualTo("/api/interpreter")));
     }
 
     @Test
@@ -140,6 +174,24 @@ class HttpOverpassClientTest
                         .withBody("""
                                 {"elements":[{"type":"node","lat":55.69,"lon":12.58,
                                  "tags":{"name":"   ","amenity":7}}]}
+                                """)));
+
+        // Act
+        List<NearbyPlace> result = client.findNearby(55.6761, 12.5683, 500, "hospital");
+
+        // Assert
+        assertEquals(List.of(), result);
+    }
+
+    @Test
+    @DisplayName("skips a place missing longitude")
+    void findNearbySkipsMissingLongitude()
+    {
+        // Arrange
+        server.stubFor(post(urlEqualTo("/api/interpreter"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {"elements":[{"type":"node","lat":55.69,"tags":{"name":"No lon"}}]}
                                 """)));
 
         // Act
@@ -252,8 +304,8 @@ class HttpOverpassClientTest
                 .withHeader("User-Agent", equalTo("SmartCity-StudentProject/1.0")));
         String encodedForm = server.getAllServeEvents().get(0).getRequest().getBodyAsString();
         String query = URLDecoder.decode(encodedForm.substring("data=".length()), StandardCharsets.UTF_8);
-        org.junit.jupiter.api.Assertions.assertTrue(query.contains("around:500,55.6761,12.5683"));
-        org.junit.jupiter.api.Assertions.assertTrue(query.contains("amenity=hospital"));
+        assertTrue(query.contains("around:500,55.6761,12.5683"));
+        assertTrue(query.contains("amenity=hospital"));
         assertTrue(query.contains("[timeout:2]"));
     }
 

@@ -32,6 +32,33 @@ class CheckTest
         assertThrows(IllegalArgumentException.class, () -> Check.requireNotNull("value", null));
     }
 
+    // [CHANGED] Added tests covering null, valid length, over-limit length, and invalid maxLength
+    @Test
+    @DisplayName("checks max length, null values, and invalid maxLength bounds")
+    void requireMaxLength()
+    {
+        // Arrange / Act / Assert
+        assertDoesNotThrow(() -> Check.requireMaxLength("name", null, 5));
+        assertDoesNotThrow(() -> Check.requireMaxLength("name", "abcde", 5));
+        assertThrows(IllegalArgumentException.class, () -> Check.requireMaxLength("name", "abcdef", 5));
+        assertThrows(IllegalArgumentException.class, () -> Check.requireMaxLength("name", "abc", 0));
+        assertThrows(IllegalArgumentException.class, () -> Check.requireMaxLength("name", "abc", -1));
+    }
+
+    // [CHANGED] Added tests covering null, clean text, ASCII control chars (< 0x20), and DEL (0x7F)
+    @Test
+    @DisplayName("rejects control characters while allowing null and normal text")
+    void requireNoControlChars()
+    {
+        // Arrange / Act / Assert
+        assertDoesNotThrow(() -> Check.requireNoControlChars("name", null));
+        assertDoesNotThrow(() -> Check.requireNoControlChars("name", "Valid Name 123"));
+        assertThrows(IllegalArgumentException.class, () -> Check.requireNoControlChars("name", "line\nbreak"));
+        assertThrows(IllegalArgumentException.class, () -> Check.requireNoControlChars("name", "tab\there"));
+        assertThrows(IllegalArgumentException.class, () -> Check.requireNoControlChars("name", "null\0byte"));
+        assertThrows(IllegalArgumentException.class, () -> Check.requireNoControlChars("name", "del\u007Fchar"));
+    }
+
     @Test
     @DisplayName("checks allowed values and missing text")
     void requireOneOf()
