@@ -1,0 +1,64 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-11-14T16:27:06Z",
+    "copyright": "The data included in this document is from [www.openstreetmap.org](https://www.openstreetmap.org). The data is made available under ODbL."
+  },
+  "elements": [
+    {
+      "type": "node",
+      "id": 298795688,
+      "lat": 55.6745260,
+      "lon": 12.5633101,
+      "tags": {
+        "alt_name": "Steno Apotek København",
+        "amenity": "pharmacy",
+        "check_date": "2024-10-24",
+        "dispensing": "yes",
+        "fvst:navnelbnr": "112586",
+        "healthcare": "pharmacy",
+        "name": "Steno Apotek",
+        "opening_hours": "24/7",
+        "ref:DK:cvr": "25455916",
+        "ref:DK:cvr:pnummer": "1002909394",
+        "wheelchair": "no"
+      }
+    },
+    {
+      "type": "node",
+      "id": 7091393972,
+      "lat": 55.6776378,
+      "lon": 12.5721348,
+      "tags": {
+        "alt_name": "Nytorv Apotek Strøget",
+        "amenity": "pharmacy",
+        "check_date:opening_hours": "2025-02-28",
+        "fvst:navnelbnr": "988237",
+        "healthcare": "pharmacy",
+        "name": "Nytorv Apotek",
+        "opening_hours": "Mo-Sa 09:00-18:00",
+        "ref:DK:cvr": "32730566",
+        "ref:DK:cvr:pnummer": "1026288009",
+        "website": "https://nytorvapotek.dk/",
+        "wheelchair": "yes"
+      }
+    },
+    {
+      "type": "node",
+      "id": 13271054875,
+      "lat": 55.6726493,
+      "lon": 12.5639470,
+      "tags": {
+        "amenity": "pharmacy",
+        "dispensing": "yes",
+        "drive_through": "no",
+        "healthcare": "pharmacy",
+        "name": "Hovedbanens Apotek",
+        "opening_hours": "Mo-Fr 08:00-19:00; Sa 09:00-15:00; Su off; PH 10:00-16:00",
+        "payment:mobilepay": "yes",
+        "wheelchair": "yes"
+      }
+    }
+  ]
+}

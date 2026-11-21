@@ -952,6 +952,9 @@ CREATE TABLE public.housing (
     location_id bigint NOT NULL,
     housing_type character varying(30) NOT NULL,
     capacity integer NOT NULL,
+    number_of_levels integer,
+    number_of_flats integer,
+    height double precision,
     CONSTRAINT chk_housing_capacity CHECK ((capacity > 0)),
     CONSTRAINT chk_housing_type CHECK (((housing_type)::text = ANY ((ARRAY['house'::character varying, 'apartment'::character varying])::text[])))
 );
@@ -967,7 +970,11 @@ ALTER TABLE public.housing OWNER TO postgres;
 CREATE TABLE public.location (
     id bigint NOT NULL,
     name character varying(150) NOT NULL,
-    street_address character varying(255) NOT NULL
+    street_address character varying(255),
+    latitude double precision,
+    longitude double precision,
+    osm_id bigint,
+    osm_type character varying(255)
 );
 
 
@@ -1065,6 +1072,13 @@ CREATE TABLE public.company (
     founded_date date NOT NULL,
     dissolved_date date,
     status character varying(20) DEFAULT 'active'::character varying NOT NULL,
+    cvr_number character varying(255),
+    production_unit_number character varying(255),
+    website character varying(255),
+    phone character varying(255),
+    email character varying(255),
+    category character varying(255),
+    opening_hours character varying(255),
     CONSTRAINT chk_company_dates CHECK (((dissolved_date IS NULL) OR (dissolved_date >= founded_date))),
     CONSTRAINT chk_company_status CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'dissolved'::character varying])::text[]))),
     CONSTRAINT chk_company_status_dates CHECK (((((status)::text = 'active'::text) AND (dissolved_date IS NULL)) OR (((status)::text = 'dissolved'::text) AND (dissolved_date IS NOT NULL))))
@@ -1160,6 +1174,9 @@ CREATE TABLE public.institution (
     location_id bigint NOT NULL,
     name character varying(200) NOT NULL,
     type character varying(30) NOT NULL,
+    website character varying(255),
+    phone character varying(255),
+    email character varying(255),
     CONSTRAINT chk_institution_type CHECK (((type)::text = ANY ((ARRAY['high_school'::character varying, 'college'::character varying, 'hospital'::character varying])::text[])))
 );
 
@@ -1395,6 +1412,14 @@ ALTER TABLE ONLY public.job
 
 ALTER TABLE ONLY public.location
     ADD CONSTRAINT location_pkey PRIMARY KEY (id);
+
+--
+-- Name: location uq_location_osm; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- One row per OpenStreetMap object (several NULL pairs are allowed for hand-made locations).
+--
+
+ALTER TABLE ONLY public.location
+    ADD CONSTRAINT uq_location_osm UNIQUE (osm_id, osm_type);
 
 
 --
@@ -1674,6 +1699,39 @@ ALTER TABLE ONLY public.citizen_relationship
 
 
 -- Completed on 2026-10-09 08:04:23 UTC
+
+
+--
+-- Security tables, used by the JWT login (entities User and Role).
+-- Name: roles, users, user_role; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.roles (
+    name character varying(255) NOT NULL,
+    CONSTRAINT roles_pkey PRIMARY KEY (name)
+);
+
+ALTER TABLE public.roles OWNER TO postgres;
+
+CREATE TABLE public.users (
+    username character varying(255) NOT NULL,
+    password character varying(255) NOT NULL,
+    CONSTRAINT users_pkey PRIMARY KEY (username)
+);
+
+ALTER TABLE public.users OWNER TO postgres;
+
+CREATE TABLE public.user_role (
+    user_id character varying(255) NOT NULL,
+    role_id character varying(255) NOT NULL,
+    CONSTRAINT user_role_pkey PRIMARY KEY (user_id, role_id),
+    CONSTRAINT fk_user_role_user FOREIGN KEY (user_id) REFERENCES public.users(username) ON DELETE CASCADE,
+    CONSTRAINT fk_user_role_role FOREIGN KEY (role_id) REFERENCES public.roles(name) ON DELETE CASCADE
+);
+
+ALTER TABLE public.user_role OWNER TO postgres;
+
+CREATE INDEX idx_user_role_role ON public.user_role USING btree (role_id);
 
 --
 -- PostgreSQL database dump complete

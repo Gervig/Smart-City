@@ -21,6 +21,7 @@ public class SecurityRoutes
 
     public static EndpointGroup getRoutes(EntityManagerFactory emf)
     {
+        app.security.daos.UserDAO.getInstance(emf);
         return () ->
         {
             path("auth", () ->

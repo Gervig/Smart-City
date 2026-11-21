@@ -58,9 +58,10 @@ public class SecurityController implements ISecurityController
             {
                 throw new NotAuthorizedException(403, "Token is not valid");
             }
-        } catch (ParseException | NotAuthorizedException | TokenVerificationException e)
+        } catch (Exception e)
         {
-            e.printStackTrace();
+            // Any problem with the token (malformed, bad signature, expired, unparsable) means 401, never 500
+            System.out.println("Token rejected: " + e.getMessage());
             throw new ApiException(HttpStatus.UNAUTHORIZED.getCode(), "Unauthorized. Could not verify token");
         }
     }
@@ -119,12 +120,13 @@ public class SecurityController implements ISecurityController
             }
 
             // If the Authorization Header was malformed, then no entry
-            String token = header.split(" ")[1];
-            if (token == null)
+            String[] parts = header.split(" ");
+            if (parts.length != 2)
             {
                 throw new UnauthorizedResponse("Authorization header is malformed"); // UnauthorizedResponse is javalin 6 specific but response is not json!
-
             }
+            String token = parts[1];
+
             UserDTO verifiedTokenUser = verifyToken(token);
             if (verifiedTokenUser == null)
             {

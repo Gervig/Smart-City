@@ -40,3 +40,5 @@ src/main/resources/config.properties
 
 # Leftover Python stuff
 .venv
+/.postman
+docs/sonarqube.txt

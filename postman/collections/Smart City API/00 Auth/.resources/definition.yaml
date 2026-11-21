@@ -1,0 +1,3 @@
+$kind: collection
+description: Register, log in and token checks. The login request stores the token in {{token}}; every later request sends it as a Bearer token.
+order: 1000

@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/education-records/{{educationId}}"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Body is JSON", function () {
+          pm.response.to.be.json;
+      });
+      pm.test("Response time is below 1500 ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+      pm.test("Returns the created id", function () {
+          pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get("educationId"));
+      });
+    language: text/javascript
+order: 3000

@@ -1,0 +1,29 @@
+$kind: http-request
+url: "{{baseUrl}}/companies/{{companyId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "locationId": {{locationId}},
+      "name": "Postman Ltd (updated)",
+      "foundedDate": "2001-03-04",
+      "dissolvedDate": null,
+      "status": "active"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Body is JSON", function () {
+          pm.response.to.be.json;
+      });
+      pm.test("Response time is below 1500 ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+    language: text/javascript
+order: 4000

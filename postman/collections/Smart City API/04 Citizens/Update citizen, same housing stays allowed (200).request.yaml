@@ -1,0 +1,35 @@
+$kind: http-request
+url: "{{baseUrl}}/citizens/{{citizenId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "firstName": "Anna",
+      "lastName": "Postmansen-Updated",
+      "birthDate": "1990-05-17",
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": {{familyId}},
+      "housingId": {{housingId}}
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Body is JSON", function () {
+          pm.response.to.be.json;
+      });
+      pm.test("Response time is below 1500 ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+      pm.test("Last name changed", function () {
+          pm.expect(pm.response.json().lastName).to.eql("Postmansen-Updated");
+      });
+    language: text/javascript
+order: 5000
