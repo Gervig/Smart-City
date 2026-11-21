@@ -3,6 +3,8 @@ package app.controllers;
 import app.services.CrudService;
 import io.javalin.http.Context;
 
+import app.dtos.PageRequest;
+
 public class CrudController<D, R> {
     private final CrudService<D, R> service;
     private final Class<R> requestType;
@@ -13,7 +15,8 @@ public class CrudController<D, R> {
     }
 
     public void getAll(Context ctx) {
-        ctx.json(service.getAll());
+        PageRequest request = PageRequestParser.parse(ctx);
+        ctx.json(service.getAll(request));
     }
 
     public void getById(Context ctx) {
