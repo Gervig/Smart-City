@@ -1,8 +1,15 @@
 package app.services;
 
+
 import app.daos.GenericDAO;
+import app.dtos.PageRequest;
+import app.dtos.PageResponse;
 
 import java.util.List;
+import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -36,6 +43,37 @@ public abstract class AbstractCrudService<E, D, R> implements CrudService<D, R> 
     public List<D> getAll() {
         return dao.findAll().stream().map(toDTO).toList();
     }
+
+
+    protected Set<String> allowedFilters() {
+        return Set.of();
+    }
+
+    @Override
+    public PageResponse<D> getAll(PageRequest request) {
+
+        List<D> data = dao.findPage(
+                request.page(),
+                request.size(),
+                request.sortField(),
+                request.sortDirection(),
+                request.filters(),
+                allowedFilters()
+        ).stream().map(toDTO).toList();
+
+        long totalElements = dao.countFiltered(
+                request.filters(),
+                allowedFilters()
+        );
+
+        return PageResponse.of(
+                data,
+                request.page(),
+                request.size(),
+                totalElements
+        );
+    }
+
 
     @Override
     public D getById(Long id) {
