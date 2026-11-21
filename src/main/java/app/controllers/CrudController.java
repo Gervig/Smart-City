@@ -1,7 +1,12 @@
 package app.controllers;
 
+import java.util.List;
+
 import app.services.CrudService;
 import io.javalin.http.Context;
+
+import app.dtos.PageRequest;
+import app.dtos.PageResponse;
 
 public class CrudController<D, R> {
     private final CrudService<D, R> service;
@@ -13,7 +18,10 @@ public class CrudController<D, R> {
     }
 
     public void getAll(Context ctx) {
-        ctx.json(service.getAll().stream().map(dto -> present(ctx, dto)).toList());
+        PageRequest request = PageRequestParser.parse(ctx);
+        PageResponse<D> page = service.getAll(request);
+        List<D> visible = page.data().stream().map(dto -> present(ctx, dto)).toList();
+        ctx.json(new PageResponse<>(visible, page.page(), page.size(), page.totalElements(), page.totalPages()));
     }
 
     public void getById(Context ctx) {

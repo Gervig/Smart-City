@@ -8,12 +8,39 @@ import app.entities.CitizenRelationship;
 import app.mappers.CitizenRelationshipMapper;
 import app.validators.CitizenRelationshipValidator;
 
+import java.util.Map;
+
 public class CitizenRelationshipService extends AbstractCrudService<CitizenRelationship, CitizenRelationshipDTO, CitizenRelationshipRequestDTO> {
     private final GenericDAO<Citizen> citizenDAO;
 
     public CitizenRelationshipService(GenericDAO<CitizenRelationship> dao, GenericDAO<Citizen> citizenDAO) {
         super(dao, CitizenRelationshipMapper.INSTANCE::toDTO, CitizenRelationshipMapper.INSTANCE::toEntity, CitizenRelationshipMapper.INSTANCE::update);
         this.citizenDAO = citizenDAO;
+    }
+
+    @Override
+    protected Map<String, String> allowedSortFields() {
+        return Map.of(
+                "id", "id",
+                "citizenId1", "citizen1.id",
+                "citizenId2", "citizen2.id",
+                "relationshipType", "relationshipType",
+                "startDate", "startDate",
+                "endDate", "endDate"
+        );
+    }
+
+    @Override
+    protected Map<String, String> allowedFilters() {
+        return Map.of(
+                "citizenId1", "citizen1.id",
+                "citizenId2", "citizen2.id",
+                "relationshipType", "relationshipType",
+                "startDateFrom", "startDate",
+                "startDateTo", "startDate",
+                "endDateFrom", "endDate",
+                "endDateTo", "endDate"
+        );
     }
 
     @Override
