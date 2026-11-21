@@ -1,5 +1,7 @@
 package app.services;
 
+import java.util.Set;
+
 import app.daos.GenericDAO;
 import app.dtos.CitizenDTO;
 import app.dtos.CitizenRequestDTO;
@@ -22,6 +24,17 @@ public class CitizenService extends AbstractCrudService<Citizen, CitizenDTO, Cit
     @Override
     protected void validate(CitizenRequestDTO request) {
         CitizenValidator.validate(request);
+    }
+
+
+    @Override
+    protected Set<String> allowedFilters() {
+        return Set.of(
+                "status",
+                "lastName",
+                "birthDateFrom",
+                "birthDateTo"
+        );
     }
 
     @Override
