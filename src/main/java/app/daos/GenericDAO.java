@@ -161,7 +161,8 @@ public class GenericDAO<T>
             String sortField,
             String sortDirection,
             Map<String, String> filters,
-            Set<String> allowedFilters
+            Set<String> allowedFilters,
+            Set<String> allowedSortFields
     )
     {
         try (EntityManager em = emf.createEntityManager())
@@ -171,7 +172,7 @@ public class GenericDAO<T>
             Root<T> root = query.from(type);
 
             // Only allow sorting by basic entity fields.
-            Set<String> sortableFields = em.getMetamodel()
+            Set<String> basicFields = em.getMetamodel()
                     .entity(type)
                     .getSingularAttributes()
                     .stream()
@@ -180,8 +181,17 @@ public class GenericDAO<T>
                     .map(Attribute::getName)
                     .collect(Collectors.toSet());
 
-            if (!sortableFields.contains(sortField))
-            {
+            if (!allowedSortFields.contains(sortField)) {
+                throw new IllegalArgumentException(
+                        "Unsupported sort field: " + sortField);
+            }
+
+            boolean basicField = basicFields.contains(sortField);
+
+            boolean relationshipId = sortField.endsWith("Id")
+                    && sortField.length() > 2;
+
+            if (!basicField && !relationshipId) {
                 throw new IllegalArgumentException(
                         "Unsupported sort field: " + sortField);
             }
@@ -192,7 +202,17 @@ public class GenericDAO<T>
             applyFilters(cb, query, root, filters, allowedFilters);
 
             // Apply sorting.
-            Path<?> sortPath = root.get(sortField);
+            Path<?> sortPath;
+
+            if (basicField) {
+                sortPath = root.get(sortField);
+            } else {
+                String relationshipName = Character.toLowerCase(
+                        sortField.charAt(0)
+                ) + sortField.substring(1, sortField.length() - 2);
+
+                sortPath = root.get(relationshipName).get("id");
+            }
 
             if ("desc".equalsIgnoreCase(sortDirection))
             {

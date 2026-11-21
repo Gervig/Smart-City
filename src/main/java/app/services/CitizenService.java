@@ -38,6 +38,21 @@ public class CitizenService extends AbstractCrudService<Citizen, CitizenDTO, Cit
     }
 
     @Override
+    protected Set<String> allowedSortFields() {
+        return Set.of(
+                "id",
+                "firstName",
+                "lastName",
+                "birthDate",
+                "deathDate",
+                "status",
+                "gender",
+                "familyId",
+                "housingId"
+        );
+    }
+
+    @Override
     protected void resolveReferences(Citizen entity, CitizenRequestDTO request) {
         entity.setFamily(familyDAO.findByIdOrThrow(request.familyId()));
         Housing housing = optional(housingDAO, request.housingId());

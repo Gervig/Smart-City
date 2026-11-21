@@ -49,6 +49,10 @@ public abstract class AbstractCrudService<E, D, R> implements CrudService<D, R> 
         return Set.of();
     }
 
+    protected Set<String> allowedSortFields() {
+        return Set.of("id");
+    }
+
     @Override
     public PageResponse<D> getAll(PageRequest request) {
 
@@ -58,7 +62,8 @@ public abstract class AbstractCrudService<E, D, R> implements CrudService<D, R> 
                 request.sortField(),
                 request.sortDirection(),
                 request.filters(),
-                allowedFilters()
+                allowedFilters(),
+                allowedSortFields()
         ).stream().map(toDTO).toList();
 
         long totalElements = dao.countFiltered(
