@@ -43,7 +43,7 @@ services:
     networks:
       - backend
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@ek.dk
+      PGADMIN_DEFAULT_EMAIL: admin@cphbusiness.dk
       PGADMIN_DEFAULT_PASSWORD: 1234
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
       PGADMIN_CONFIG_MAX_LOGIN_ATTEMPTS: 0
