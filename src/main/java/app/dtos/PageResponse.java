@@ -9,13 +9,15 @@ public record PageResponse<T>(
         int size,
         long totalElements,
         int totalPages
-) {
+)
+{
     public static <T> PageResponse<T> of(
             List<T> data,
             int page,
             int size,
             long totalElements
-    ) {
+    )
+    {
         int totalPages = (int) (
                 totalElements / size
                         + (totalElements % size == 0 ? 0 : 1)

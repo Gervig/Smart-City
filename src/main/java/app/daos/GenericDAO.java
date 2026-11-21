@@ -271,19 +271,16 @@ public class GenericDAO<T>
             {
                 predicates.add(cb.greaterThanOrEqualTo(
                         (Path) path, (Comparable) converted));
-            }
-            else if (to)
+            } else if (to)
             {
                 predicates.add(cb.lessThanOrEqualTo(
                         (Path) path, (Comparable) converted));
-            }
-            else if (javaType == String.class)
+            } else if (javaType == String.class)
             {
                 predicates.add(cb.like(
                         cb.lower((Path<String>) path),
                         "%" + value.toLowerCase(Locale.ROOT) + "%"));
-            }
-            else
+            } else
             {
                 predicates.add(cb.equal(path, converted));
             }
