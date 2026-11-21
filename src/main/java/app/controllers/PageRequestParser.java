@@ -17,22 +17,22 @@ public class PageRequestParser {
 
         // Read pagination parameters.
         int page = parseInteger(
-                ctx.queryParam("page"),
-                0,
+                singleParameter(ctx, "page"),
+                PageRequest.DEFAULT_PAGE,
                 "page"
         );
 
         int size = parseInteger(
-                ctx.queryParam("size"),
-                20,
+                singleParameter(ctx, "size"),
+                PageRequest.DEFAULT_SIZE,
                 "size"
         );
 
         // Read sorting parameters.
-        String sort = ctx.queryParam("sort");
+        String sort = singleParameter(ctx, "sort");
 
-        String sortField = "id";
-        String sortDirection = "asc";
+        String sortField = PageRequest.DEFAULT_SORT_FIELD;
+        String sortDirection = PageRequest.DEFAULT_SORT_DIRECTION;
 
         if (sort != null && !sort.isBlank()) {
             String[] parts = sort.split(",", -1);
@@ -53,9 +53,14 @@ public class PageRequestParser {
         Map<String, String> filters = new HashMap<>();
 
         ctx.queryParamMap().forEach((key, values) -> {
-            if (!RESERVED_PARAMETERS.contains(key)
-                    && !values.isEmpty()) {
-                filters.put(key, values.get(0));
+            if (!RESERVED_PARAMETERS.contains(key)) {
+                if (values.size() > 1) {
+                    throw new IllegalArgumentException(
+                            "Filter '" + key + "' must be specified once");
+                }
+                if (!values.isEmpty()) {
+                    filters.put(key, values.get(0));
+                }
             }
         });
 
@@ -66,6 +71,18 @@ public class PageRequestParser {
                 sortDirection,
                 filters
         );
+    }
+
+    private static String singleParameter(Context ctx, String name) {
+        var values = ctx.queryParamMap().get(name);
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+        if (values.size() > 1) {
+            throw new IllegalArgumentException(
+                    "Parameter '" + name + "' must be specified once");
+        }
+        return values.get(0);
     }
 
     private static int parseInteger(

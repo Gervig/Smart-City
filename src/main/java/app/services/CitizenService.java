@@ -1,6 +1,6 @@
 package app.services;
 
-import java.util.Set;
+import java.util.Map;
 
 import app.daos.GenericDAO;
 import app.dtos.CitizenDTO;
@@ -28,27 +28,29 @@ public class CitizenService extends AbstractCrudService<Citizen, CitizenDTO, Cit
 
 
     @Override
-    protected Set<String> allowedFilters() {
-        return Set.of(
-                "status",
-                "lastName",
-                "birthDateFrom",
-                "birthDateTo"
+    protected Map<String, String> allowedFilters() {
+        return Map.of(
+                "status", "status",
+                "lastName", "lastName",
+                "birthDateFrom", "birthDate",
+                "birthDateTo", "birthDate",
+                "familyId", "family.id",
+                "housingId", "housing.id"
         );
     }
 
     @Override
-    protected Set<String> allowedSortFields() {
-        return Set.of(
-                "id",
-                "firstName",
-                "lastName",
-                "birthDate",
-                "deathDate",
-                "status",
-                "gender",
-                "familyId",
-                "housingId"
+    protected Map<String, String> allowedSortFields() {
+        return Map.of(
+                "id", "id",
+                "firstName", "firstName",
+                "lastName", "lastName",
+                "birthDate", "birthDate",
+                "deathDate", "deathDate",
+                "status", "status",
+                "gender", "gender",
+                "familyId", "family.id",
+                "housingId", "housing.id"
         );
     }
 

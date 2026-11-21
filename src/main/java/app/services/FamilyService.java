@@ -1,6 +1,6 @@
 package app.services;
 
-import java.util.Set;
+import java.util.Map;
 
 import app.daos.GenericDAO;
 import app.dtos.FamilyDTO;
@@ -15,11 +15,16 @@ public class FamilyService extends AbstractCrudService<Family, FamilyDTO, Family
     }
 
     @Override
-    protected Set<String> allowedSortFields() {
-        return Set.of(
-                "id",
-                "familyName"
+    protected Map<String, String> allowedSortFields() {
+        return Map.of(
+                "id", "id",
+                "familyName", "familyName"
         );
+    }
+
+    @Override
+    protected Map<String, String> allowedFilters() {
+        return Map.of("familyName", "familyName");
     }
 
     @Override

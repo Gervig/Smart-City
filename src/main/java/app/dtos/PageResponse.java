@@ -8,7 +8,7 @@ public record PageResponse<T>(
         int page,
         int size,
         long totalElements,
-        int totalPages
+        long totalPages
 )
 {
     public static <T> PageResponse<T> of(
@@ -18,10 +18,9 @@ public record PageResponse<T>(
             long totalElements
     )
     {
-        int totalPages = (int) (
+        long totalPages =
                 totalElements / size
-                        + (totalElements % size == 0 ? 0 : 1)
-        );
+                        + (totalElements % size == 0 ? 0 : 1);
 
         return new PageResponse<>(
                 data,

@@ -2,6 +2,7 @@
 package app.dtos;
 
 import java.util.Map;
+import java.util.Locale;
 
 public record PageRequest(
         int page,
@@ -14,6 +15,8 @@ public record PageRequest(
     public static final int DEFAULT_PAGE = 0;
     public static final int DEFAULT_SIZE = 20;
     public static final int MAX_SIZE = 100;
+    public static final String DEFAULT_SORT_FIELD = "id";
+    public static final String DEFAULT_SORT_DIRECTION = "asc";
 
     public PageRequest
     {
@@ -29,17 +32,22 @@ public record PageRequest(
                     "Page size must be between 1 and " + MAX_SIZE);
         }
 
+        if (page > Integer.MAX_VALUE / size)
+        {
+            throw new IllegalArgumentException("Page offset is too large");
+        }
+
         if (sortField == null || sortField.isBlank())
         {
-            sortField = "id";
+            sortField = DEFAULT_SORT_FIELD;
         }
 
         if (sortDirection == null || sortDirection.isBlank())
         {
-            sortDirection = "asc";
+            sortDirection = DEFAULT_SORT_DIRECTION;
         }
 
-        sortDirection = sortDirection.toLowerCase();
+        sortDirection = sortDirection.toLowerCase(Locale.ROOT);
 
         if (!sortDirection.equals("asc")
                 && !sortDirection.equals("desc"))
@@ -56,8 +64,8 @@ public record PageRequest(
         return new PageRequest(
                 DEFAULT_PAGE,
                 DEFAULT_SIZE,
-                "id",
-                "asc",
+                DEFAULT_SORT_FIELD,
+                DEFAULT_SORT_DIRECTION,
                 Map.of()
         );
     }

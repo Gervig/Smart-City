@@ -8,12 +8,33 @@ import app.entities.Location;
 import app.mappers.InstitutionMapper;
 import app.validators.InstitutionValidator;
 
+import java.util.Map;
+
 public class InstitutionService extends AbstractCrudService<Institution, InstitutionDTO, InstitutionRequestDTO> {
     private final GenericDAO<Location> locationDAO;
 
     public InstitutionService(GenericDAO<Institution> dao, GenericDAO<Location> locationDAO) {
         super(dao, InstitutionMapper.INSTANCE::toDTO, InstitutionMapper.INSTANCE::toEntity, InstitutionMapper.INSTANCE::update);
         this.locationDAO = locationDAO;
+    }
+
+    @Override
+    protected Map<String, String> allowedSortFields() {
+        return Map.of(
+                "id", "id",
+                "locationId", "location.id",
+                "name", "name",
+                "type", "type"
+        );
+    }
+
+    @Override
+    protected Map<String, String> allowedFilters() {
+        return Map.of(
+                "locationId", "location.id",
+                "name", "name",
+                "type", "type"
+        );
     }
 
     @Override

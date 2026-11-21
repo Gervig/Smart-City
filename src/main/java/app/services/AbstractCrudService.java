@@ -6,10 +6,7 @@ import app.dtos.PageRequest;
 import app.dtos.PageResponse;
 
 import java.util.List;
-import java.util.Set;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -45,12 +42,12 @@ public abstract class AbstractCrudService<E, D, R> implements CrudService<D, R> 
     }
 
 
-    protected Set<String> allowedFilters() {
-        return Set.of();
+    protected Map<String, String> allowedFilters() {
+        return Map.of();
     }
 
-    protected Set<String> allowedSortFields() {
-        return Set.of("id");
+    protected Map<String, String> allowedSortFields() {
+        return Map.of("id", "id");
     }
 
     @Override

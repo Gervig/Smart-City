@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState} from 'react'
+import {useCallback, useEffect, useRef, useState} from 'react'
 import {request} from './api.js'
 import {useAuth} from './auth.jsx'
 import {emptyForm, formatValue, fromRecord, toPayload} from './resources.js'
@@ -10,16 +10,19 @@ export default function CrudPage({resource}) {
     const [page, setPage] = useState(0)
     const size = 20
 
-    const [sortField, setSortField] = useState('id')
-    const [sortDirection, setSortDirection] = useState('asc')
+    const [sortField, setSortField] = useState(resource.defaultSort.field)
+    const [sortDirection, setSortDirection] = useState(resource.defaultSort.direction)
     const [totalElements, setTotalElements] = useState(0)
     const [totalPages, setTotalPages] = useState(0)
+    const [filters, setFilters] = useState({})
+    const [filterDraft, setFilterDraft] = useState({})
 
     const [loading, setLoading] = useState(true)
     const [form, setForm] = useState(() => emptyForm(resource))
     const [editingId, setEditingId] = useState(null)
     const [error, setError] = useState('')
     const [notice, setNotice] = useState('')
+    const latestRequest = useRef(0)
 
     const handleError = useCallback((e) => {
         if (e.status === 401) {
@@ -31,44 +34,73 @@ export default function CrudPage({resource}) {
     }, [logout])
 
     // Load the current page of records.
-    const load = useCallback(async () => {
+    const load = useCallback(async (requestedPage = page) => {
+        const requestId = ++latestRequest.current
         setLoading(true)
 
         try {
-            const result = await request(
-                `${resource.path}?page=${page}&size=${size}&sort=${sortField},${sortDirection}`,
-                { token }
-            )
+            const params = new URLSearchParams({
+                page: String(requestedPage),
+                size: String(size),
+                sort: `${sortField},${sortDirection}`,
+            })
+            Object.entries(filters).forEach(([name, value]) => {
+                if (value !== '') params.set(name, String(value))
+            })
 
+            const result = await request(`${resource.path}?${params}`, { token })
+
+            if (requestId !== latestRequest.current) return
             setRows(result.data)
             setTotalElements(result.totalElements)
             setTotalPages(result.totalPages)
+            const lastPage = Math.max(result.totalPages - 1, 0)
+            if (requestedPage > lastPage) setPage(lastPage)
         } catch (e) {
-            handleError(e)
+            if (requestId === latestRequest.current) handleError(e)
         } finally {
-            setLoading(false)
+            if (requestId === latestRequest.current) setLoading(false)
         }
-    }, [resource.path, token, handleError, page, sortField, sortDirection])
+    }, [resource.path, token, handleError, page, sortField, sortDirection, filters])
 
-    // Reset the form when switching resources.
     useEffect(() => {
-        setForm(emptyForm(resource))
-        setEditingId(null)
-        setError('')
-        setNotice('')
-        setPage(0)
-    }, [resource])
+        setFilterDraft(filters)
+    }, [filters])
 
     // Load records whenever the page or resource changes.
     useEffect(() => {
-        load()
+        void load()
+        return () => {
+            latestRequest.current += 1
+        }
     }, [load])
 
     function change(name, value) {
         setForm((f) => ({...f, [name]: value}))
     }
 
+    function changeFilter(name, value) {
+        setFilterDraft((current) => ({...current, [name]: value}))
+    }
+
+    function applyFilters(event) {
+        event.preventDefault()
+        const nextFilters = Object.fromEntries(
+            Object.entries(filterDraft).filter(([, value]) => value !== '')
+        )
+        setPage(0)
+        setFilters(nextFilters)
+    }
+
+    function clearFilters() {
+        setFilterDraft({})
+        setPage(0)
+        setFilters({})
+    }
+
     function handleSort(field) {
+        if (!resource.sortableFields.includes(field)) return
+
         if (sortField === field) {
             setSortDirection((current) =>
                 current === 'asc' ? 'desc' : 'asc'
@@ -102,6 +134,7 @@ export default function CrudPage({resource}) {
                 })
 
                 setNotice('Created.')
+                setPage(0)
             } else {
                 await request(`${resource.path}/${editingId}`, {
                     method: 'PUT',
@@ -113,7 +146,7 @@ export default function CrudPage({resource}) {
             }
 
             reset()
-            await load()
+            await load(editingId === null ? 0 : page)
         } catch (e) {
             handleError(e)
         }
@@ -218,6 +251,44 @@ export default function CrudPage({resource}) {
                 </div>
             </form>
 
+            {resource.filters?.length > 0 && (
+                <form className="card" onSubmit={applyFilters} data-testid="filters">
+                    <h2>Filter records</h2>
+                    <div className="grid">
+                        {resource.filters.map((filter) => (
+                            <label key={filter.name}>
+                                {filter.label}
+                                {filter.type === 'select' ? (
+                                    <select
+                                        name={filter.name}
+                                        value={filterDraft[filter.name] ?? ''}
+                                        onChange={(e) => changeFilter(filter.name, e.target.value)}
+                                        data-testid={`filter-${filter.name}`}
+                                    >
+                                        <option value="">All</option>
+                                        {filter.options.map((option) => (
+                                            <option key={option} value={option}>{option}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <input
+                                        name={filter.name}
+                                        type={filter.type}
+                                        value={filterDraft[filter.name] ?? ''}
+                                        onChange={(e) => changeFilter(filter.name, e.target.value)}
+                                        data-testid={`filter-${filter.name}`}
+                                    />
+                                )}
+                            </label>
+                        ))}
+                    </div>
+                    <div className="actions">
+                        <button type="submit">Apply filters</button>
+                        <button type="button" className="secondary" onClick={clearFilters}>Clear</button>
+                    </div>
+                </form>
+            )}
+
             {loading ? (
                 <p>Loading…</p>
             ) : (
@@ -233,9 +304,11 @@ export default function CrudPage({resource}) {
                         </button>
 
                         <span>
-              Page {page + 1} of {totalPages} (
-                            {rows.length} records displayed out of {totalElements} total)
-            </span>
+                            {totalPages === 0
+                                ? 'No pages'
+                                : `Page ${page + 1} of ${totalPages}`}
+                            {` (${rows.length} records displayed out of ${totalElements} total)`}
+                        </span>
 
                         <button
                             type="button"
@@ -250,7 +323,7 @@ export default function CrudPage({resource}) {
                     <table data-testid={testId('table')}>
                         <thead>
                         <tr>
-                            <th>
+                            <th aria-sort={sortField === 'id' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}>
                                 <button
                                     type="button"
                                     className="secondary"
@@ -261,10 +334,14 @@ export default function CrudPage({resource}) {
                             </th>
 
                             {resource.fields.map((f) => (
-                                <th key={f.name}>
+                                <th
+                                    key={f.name}
+                                    aria-sort={sortField === f.name ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                                >
                                     <button
                                         type="button"
                                         className="secondary"
+                                        disabled={!resource.sortableFields.includes(f.name)}
                                         onClick={() => handleSort(f.name)}
                                     >
                                         {f.label}{' '}
@@ -323,30 +400,6 @@ export default function CrudPage({resource}) {
                         ))}
                         </tbody>
                     </table>
-
-                    <div className="pagination">
-                        <button
-                            type="button"
-                            className="secondary"
-                            disabled={page === 0}
-                            onClick={() => setPage((current) => current - 1)}
-                        >
-                            Previous
-                        </button>
-
-                        <span>
-              Page {page + 1} of {totalPages} ({totalElements} records)
-            </span>
-
-                        <button
-                            type="button"
-                            className="secondary"
-                            disabled={page >= totalPages - 1}
-                            onClick={() => setPage((current) => current + 1)}
-                        >
-                            Next
-                        </button>
-                    </div>
                 </>
             )}
         </section>

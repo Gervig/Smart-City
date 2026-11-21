@@ -377,6 +377,26 @@ All CRUD endpoints below are registered at the application root. Each resource s
 | Education records | `/education-records` |
 | Jobs | `/jobs` |
 
+Collection endpoints support zero-based pagination and filtering with `page` (default `0`), `size` (default `20`, maximum `100`), and `sort=field,asc|desc` (default `id,asc`). They return a JSON envelope containing `data`, `page`, `size`, `totalElements`, and `totalPages`; counts include all matching records. For example:
+
+```text
+GET /citizens?page=0&size=20&sort=familyId,asc&lastName=smith&birthDateFrom=1980-01-01&birthDateTo=2000-12-31
+```
+
+Sort and filter names are allowlisted per resource; relationship ID fields such as `familyId`, `housingId`, and `locationId` address the related entity IDs. Unsupported fields, invalid filter values, invalid page or size values, and invalid sort directions return HTTP 400. A page beyond the last page returns an empty `data` array. String filters use case-insensitive partial matching. Available filters are:
+
+| Resource | Filters |
+|---|---|
+| Citizens | `status`, `lastName`, `birthDateFrom`, `birthDateTo`, `familyId`, `housingId` |
+| Families | `familyName` |
+| Housings | `locationId`, `housingType`, `capacityFrom`, `capacityTo` |
+| Locations | `name`, `streetAddress` |
+| Companies | `locationId`, `name`, `status`, `foundedDateFrom`, `foundedDateTo` |
+| Institutions | `locationId`, `name`, `type` |
+| Jobs | `citizenId`, `companyId`, `institutionId`, `title`, `status`, `salaryFrom`, `salaryTo`, `startDateFrom`, `startDateTo`, `endDateFrom`, `endDateTo` |
+| Education records | `citizenId`, `institutionId`, `startDateFrom`, `startDateTo`, `endDateFrom`, `endDateTo` |
+| Citizen relationships | `citizenId1`, `citizenId2`, `relationshipType`, `startDateFrom`, `startDateTo`, `endDateFrom`, `endDateTo` |
+
 | Method | Path | Access | Description |
 |---|---|---|---|
 | POST | `/api/auth/register` | Public | Register a user; new accounts receive the `user` role |

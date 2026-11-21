@@ -9,15 +9,15 @@ import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.metamodel.Attribute;
+import jakarta.persistence.metamodel.ManagedType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 
 public class GenericDAO<T>
@@ -161,37 +161,26 @@ public class GenericDAO<T>
             String sortField,
             String sortDirection,
             Map<String, String> filters,
-            Set<String> allowedFilters,
-            Set<String> allowedSortFields
+            Map<String, String> allowedFilters,
+            Map<String, String> allowedSortFields
     )
     {
+        if (page < 0 || size < 1) {
+            throw new IllegalArgumentException("Page must be non-negative and size must be positive");
+        }
+        long offset = (long) page * size;
+        if (offset > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Page offset is too large");
+        }
+
         try (EntityManager em = emf.createEntityManager())
         {
             CriteriaBuilder cb = em.getCriteriaBuilder();
             CriteriaQuery<T> query = cb.createQuery(type);
             Root<T> root = query.from(type);
 
-            // Only allow sorting by basic entity fields.
-            Set<String> basicFields = em.getMetamodel()
-                    .entity(type)
-                    .getSingularAttributes()
-                    .stream()
-                    .filter(a -> a.getPersistentAttributeType()
-                            == Attribute.PersistentAttributeType.BASIC)
-                    .map(Attribute::getName)
-                    .collect(Collectors.toSet());
-
-            if (!allowedSortFields.contains(sortField)) {
-                throw new IllegalArgumentException(
-                        "Unsupported sort field: " + sortField);
-            }
-
-            boolean basicField = basicFields.contains(sortField);
-
-            boolean relationshipId = sortField.endsWith("Id")
-                    && sortField.length() > 2;
-
-            if (!basicField && !relationshipId) {
+            String sortPathName = allowedSortFields.get(sortField);
+            if (sortPathName == null) {
                 throw new IllegalArgumentException(
                         "Unsupported sort field: " + sortField);
             }
@@ -199,31 +188,25 @@ public class GenericDAO<T>
             query.select(root);
 
             // Apply the requested filters.
-            applyFilters(cb, query, root, filters, allowedFilters);
+            applyFilters(cb, query, root, filters, allowedFilters, em);
 
             // Apply sorting.
-            Path<?> sortPath;
-
-            if (basicField) {
-                sortPath = root.get(sortField);
+            Path<?> sortPath = resolveBasicPath(root, em, sortPathName);
+            List<jakarta.persistence.criteria.Order> orders = new ArrayList<>();
+            if ("desc".equalsIgnoreCase(sortDirection)) {
+                orders.add(cb.desc(sortPath));
+            } else if ("asc".equalsIgnoreCase(sortDirection)) {
+                orders.add(cb.asc(sortPath));
             } else {
-                String relationshipName = Character.toLowerCase(
-                        sortField.charAt(0)
-                ) + sortField.substring(1, sortField.length() - 2);
-
-                sortPath = root.get(relationshipName).get("id");
+                throw new IllegalArgumentException("Sort direction must be asc or desc");
             }
-
-            if ("desc".equalsIgnoreCase(sortDirection))
-            {
-                query.orderBy(cb.desc(sortPath));
-            } else
-            {
-                query.orderBy(cb.asc(sortPath));
+            if (!"id".equals(sortPathName)) {
+                orders.add(cb.asc(resolveBasicPath(root, em, "id")));
             }
+            query.orderBy(orders);
 
             return em.createQuery(query)
-                    .setFirstResult(page * size)
+                    .setFirstResult((int) offset)
                     .setMaxResults(size)
                     .getResultList();
         }
@@ -231,7 +214,7 @@ public class GenericDAO<T>
 
     public long countFiltered(
             Map<String, String> filters,
-            Set<String> allowedFilters)
+            Map<String, String> allowedFilters)
     {
         try (EntityManager em = emf.createEntityManager())
         {
@@ -241,7 +224,7 @@ public class GenericDAO<T>
 
             query.select(cb.count(root));
 
-            applyFilters(cb, query, root, filters, allowedFilters);
+            applyFilters(cb, query, root, filters, allowedFilters, em);
 
             return em.createQuery(query).getSingleResult();
         }
@@ -253,7 +236,8 @@ public class GenericDAO<T>
             CriteriaQuery<?> query,
             Root<T> root,
             Map<String, String> filters,
-            Set<String> allowedFilters)
+            Map<String, String> allowedFilters,
+            EntityManager em)
     {
         List<Predicate> predicates = new ArrayList<>();
 
@@ -262,53 +246,103 @@ public class GenericDAO<T>
             String field = entry.getKey();
             String value = entry.getValue();
 
+            String attributePath = allowedFilters.get(field);
+            if (attributePath == null) {
+                throw new IllegalArgumentException("Unsupported filter: " + field);
+            }
             if (value == null || value.isBlank())
             {
                 continue;
             }
 
-            if (!allowedFilters.contains(field))
-            {
-                throw new IllegalArgumentException(
-                        "Unsupported filter: " + field);
-            }
-
             boolean from = field.endsWith("From");
             boolean to = field.endsWith("To");
-
-            String attribute = from
-                    ? field.substring(0, field.length() - 4)
-                    : to
-                    ? field.substring(0, field.length() - 2)
-                    : field;
-
-            Path<?> path = root.get(attribute);
+            Path<?> path = resolveBasicPath(root, em, attributePath);
             Class<?> javaType = path.getJavaType();
 
             Object converted = convert(value, javaType);
 
             if (from)
             {
+                requireRangeType(field, javaType);
                 predicates.add(cb.greaterThanOrEqualTo(
                         (Path) path, (Comparable) converted));
             } else if (to)
             {
+                requireRangeType(field, javaType);
                 predicates.add(cb.lessThanOrEqualTo(
                         (Path) path, (Comparable) converted));
             } else if (javaType == String.class)
             {
                 predicates.add(cb.like(
                         cb.lower((Path<String>) path),
-                        "%" + value.toLowerCase(Locale.ROOT) + "%"));
+                        "%" + escapeLike(value.toLowerCase(Locale.ROOT)) + "%",
+                        '\\'));
             } else
             {
                 predicates.add(cb.equal(path, converted));
             }
         }
 
-        query.where(predicates.toArray(new Predicate[0]));
+        if (!predicates.isEmpty()) {
+            query.where(predicates.toArray(new Predicate[0]));
+        }
     }
 
+    private Path<?> resolveBasicPath(Root<T> root, EntityManager em, String path) {
+        if (path == null || path.isBlank()) {
+            throw new IllegalArgumentException("Entity path is required");
+        }
+        String[] parts = path.split("\\.", -1);
+        ManagedType<?> managedType = em.getMetamodel().entity(type);
+        Path<?> currentPath = root;
+
+        for (int i = 0; i < parts.length; i++) {
+            String part = parts[i];
+            Attribute<?, ?> attribute;
+            try {
+                attribute = managedType.getAttribute(part);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid entity path: " + path, e);
+            }
+
+            boolean last = i == parts.length - 1;
+            if (last) {
+                if (attribute.getPersistentAttributeType()
+                        != Attribute.PersistentAttributeType.BASIC) {
+                    throw new IllegalArgumentException("Entity path must end in a basic attribute: " + path);
+                }
+            } else {
+                Attribute.PersistentAttributeType attributeType =
+                        attribute.getPersistentAttributeType();
+                if (attribute.isCollection()
+                        || (attributeType != Attribute.PersistentAttributeType.MANY_TO_ONE
+                        && attributeType != Attribute.PersistentAttributeType.ONE_TO_ONE)) {
+                    throw new IllegalArgumentException("Invalid relationship path: " + path);
+                }
+                try {
+                    managedType = em.getMetamodel().managedType(attribute.getJavaType());
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Invalid relationship path: " + path, e);
+                }
+            }
+            currentPath = currentPath.get(part);
+        }
+
+        return currentPath;
+    }
+
+    private void requireRangeType(String field, Class<?> javaType) {
+        if (!Number.class.isAssignableFrom(javaType) && javaType != LocalDate.class) {
+            throw new IllegalArgumentException("Range filtering is not supported for: " + field);
+        }
+    }
+
+    private String escapeLike(String value) {
+        return value.replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+    }
 
     private Object convert(String value, Class<?> type)
     {
@@ -340,7 +374,11 @@ public class GenericDAO<T>
         }
         if (type == LocalDate.class)
         {
-            return LocalDate.parse(value);
+            try {
+                return LocalDate.parse(value);
+            } catch (DateTimeParseException e) {
+                throw new IllegalArgumentException("Invalid date value: " + value, e);
+            }
         }
         if (type == BigDecimal.class)
         {
@@ -364,9 +402,12 @@ public class GenericDAO<T>
     {
         try (EntityManager em = emf.createEntityManager())
         {
-            return em.createQuery("SELECT COUNT(e) FROM " + type.getSimpleName() + " e WHERE e." + attributePath + " = :value", Long.class)
-                    .setParameter("value", value)
-                    .getSingleResult();
+            CriteriaBuilder cb = em.getCriteriaBuilder();
+            CriteriaQuery<Long> query = cb.createQuery(Long.class);
+            Root<T> root = query.from(type);
+            query.select(cb.count(root))
+                    .where(cb.equal(resolveBasicPath(root, em, attributePath), value));
+            return em.createQuery(query).getSingleResult();
         }
     }
 
