@@ -1,6 +1,7 @@
 package app.routes;
 
 import app.controllers.CrudController;
+import app.controllers.JobController;
 import app.daos.GenericDAO;
 import app.dtos.*;
 import app.entities.*;
@@ -11,6 +12,7 @@ import app.security.enums.Role;
 import app.services.*;
 import io.javalin.Javalin;
 import io.javalin.http.HandlerType;
+import io.javalin.security.RouteRole;
 import jakarta.persistence.EntityManagerFactory;
 
 import java.time.Clock;
@@ -56,19 +58,29 @@ public class Routes {
         crud(app, "/institutions", new CrudController<>(institutionService, InstitutionRequestDTO.class));
         crud(app, "/companies", new CrudController<>(companyService, CompanyRequestDTO.class));
         crud(app, "/education-records", new CrudController<>(educationRecordService, EducationRecordRequestDTO.class));
-        crud(app, "/jobs", new CrudController<>(jobService, JobRequestDTO.class));
-        app.get("/locations/{id}/nearby", new NearbyPlacesController(nearbyPlacesService)::getNearby);
+        crud(app, "/jobs", new JobController(jobService), ADMINS);
+        app.get("/locations/{id}/nearby", new NearbyPlacesController(nearbyPlacesService)::getNearby, USERS);
         SeedController seedController = new SeedController(seedService);
         app.addHttpHandler(HandlerType.POST, "/api/admin/seed/locations", seedController::seedLocations, Role.ADMIN);
         app.addHttpHandler(HandlerType.POST, "/api/admin/seed/fake", seedController::seedFakeData, Role.ADMIN);
         app.addHttpHandler(HandlerType.POST, "/api/admin/seed/enrich", seedController::enrich, Role.ADMIN);
     }
 
+    // Role rules: users and administrators have full CRUD on all city data. The exception is the salary of a job,
+    // which only administrators can see and set (JobController); because a new job needs a salary, only
+    // administrators can create jobs. Without a valid token every route below answers 401; without the role, 403.
+    private static final RouteRole[] USERS = {Role.USER, Role.ADMIN};
+    private static final RouteRole[] ADMINS = {Role.ADMIN};
+
     private static void crud(Javalin app, String path, CrudController<?, ?> c) {
-        app.get(path, c::getAll);
-        app.get(path + "/{id}", c::getById);
-        app.post(path, c::create);
-        app.put(path + "/{id}", c::update);
-        app.delete(path + "/{id}", c::delete);
+        crud(app, path, c, USERS);
+    }
+
+    private static void crud(Javalin app, String path, CrudController<?, ?> c, RouteRole[] createRoles) {
+        app.get(path, c::getAll, USERS);
+        app.get(path + "/{id}", c::getById, USERS);
+        app.post(path, c::create, createRoles);
+        app.put(path + "/{id}", c::update, USERS);
+        app.delete(path + "/{id}", c::delete, USERS);
     }
 }

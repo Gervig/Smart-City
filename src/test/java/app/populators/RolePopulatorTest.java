@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class RolePopulatorTest
 {
     @Test
-    @DisplayName("populates the admin role")
+    @DisplayName("populates the user and admin roles")
     void populate()
     {
         // Arrange
@@ -23,7 +23,8 @@ class RolePopulatorTest
         List<Role> roles = RolePopulator.populate();
 
         // Assert
-        assertEquals(1, roles.size());
-        assertEquals("admin", roles.get(0).getName());
+        assertEquals(2, roles.size());
+        assertEquals("user", roles.get(0).getName());
+        assertEquals("admin", roles.get(1).getName());
     }
 }
