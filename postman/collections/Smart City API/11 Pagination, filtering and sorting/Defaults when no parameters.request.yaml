@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{baseUrl}}/families"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      var json = pm.response.json();
+      pm.test("Default page 0, size 20", function () {
+          pm.expect(json.page).to.eql(0);
+          pm.expect(json.size).to.eql(20);
+      });
+    language: text/javascript
+order: 4000

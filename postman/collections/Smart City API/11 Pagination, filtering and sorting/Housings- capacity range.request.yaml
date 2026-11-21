@@ -1,0 +1,19 @@
+$kind: http-request
+name: "Housings: capacity range"
+url: "{{baseUrl}}/housings?capacityFrom=1&capacityTo=2"
+method: GET
+queryParams:
+  capacityFrom: "1"
+  capacityTo: "2"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      var json = pm.response.json();
+      pm.test("all within range", function () {
+          json.data.forEach(function (h) { pm.expect(h.capacity).to.be.within(1,2); });
+      });
+    language: text/javascript
+order: 16000

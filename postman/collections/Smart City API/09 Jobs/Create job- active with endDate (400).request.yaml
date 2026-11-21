@@ -17,7 +17,12 @@ body:
       "endDate": "2020-01-01",
       "status": "active"
     }
+auth:
+  type: noauth
 scripts:
+  - type: beforeRequest
+    code: 'pm.request.headers.upsert({key: "Authorization", value: "Bearer " + pm.collectionVariables.get("adminToken")});'
+    language: text/javascript
   - type: afterResponse
     code: |-
       pm.test("Status is 400", function () {
