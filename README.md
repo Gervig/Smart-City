@@ -53,8 +53,6 @@ java -jar target/app.jar
 
 The API listens on <http://localhost:7070>. The Javalin route overview is at <http://localhost:7070/api/routes>.
 
-> **Warning:** The current Hibernate development configuration uses `hibernate.hbm2ddl.auto=create`. Starting the application recreates the schema and deletes existing database data. Use only a disposable development database unless this configuration has been changed.
-
 ## Repository structure
 
 ```text
