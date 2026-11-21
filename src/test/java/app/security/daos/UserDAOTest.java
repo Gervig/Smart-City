@@ -204,13 +204,9 @@ class UserDAOTest
         eve.addRole(new Role("ghost")); // this role does not exist in the database
 
         // Act
-        User returned = userDAO.create(eve);
+        assertThrows(EntityNotFoundException.class, () -> userDAO.create(eve));
 
         // Assert
-        // NOTE: create() currently swallows the exception (catch Throwable + printStackTrace),
-        // so the caller is never told that saving failed. If you change create() to let the
-        // exception through, replace the act step with assertThrows(...).
-        assertSame(eve, returned);
         assertEquals(2, userDAO.readAll().size());
         assertThrows(ApiException.class, () -> userDAO.read("eve"));
     }

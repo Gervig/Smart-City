@@ -22,7 +22,7 @@
         <junit.version>5.11.4</junit.version>
         <hamcrest.version>3.0</hamcrest.version>
         <rest-assured.version>5.5.0</rest-assured.version>
-        <testcontainers.version>1.20.4</testcontainers.version>
+        <testcontainers.version>1.21.4</testcontainers.version>
         <jackson.version>2.16.0</jackson.version>
         <token.security.version>1.0.4</token.security.version>
         <mapstruct.version>1.6.3</mapstruct.version>

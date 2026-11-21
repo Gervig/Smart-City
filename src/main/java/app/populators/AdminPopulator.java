@@ -6,8 +6,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 
 /**
- * Run manually with {@code AdminPopulator.populate(HibernateConfig.getEntityManagerFactory())} after setting
- * {@code ADMIN_PASSWORD}; this is deliberately not called automatically by Main.
+ * Creates the admin user. Called at startup by {@link StartupPopulator}; does nothing when the password is null
+ * and nothing when the admin already exists.
  */
 public final class AdminPopulator
 {

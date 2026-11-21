@@ -40,10 +40,17 @@ export function AuthProvider({ children }) {
     await login(username, password)
   }, [login])
 
+  // Forget the token here first, so the page never waits, then tell the backend to reject it from now on
+  // (POST /api/auth/logout puts it on the denylist). If that call fails (offline, or the token was already
+  // invalid, which is why a 401 logs out), there is nothing more to do: the token is gone from this browser.
   const logout = useCallback(() => {
+    const token = auth?.token
     save(null)
     setAuth(null)
-  }, [])
+    if (token) {
+      request('/api/auth/logout', { method: 'POST', token }).catch(() => {})
+    }
+  }, [auth])
 
   const value = useMemo(
     () => ({ token: auth?.token ?? null, username: auth?.username ?? null, login, register, logout }),

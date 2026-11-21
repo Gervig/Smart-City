@@ -39,42 +39,60 @@ public class UserDAO
     // ** singleton
 
 
+    /**
+     * Saves a new user. A user without roles gets the role user.
+     *
+     * @throws ApiException             409 when the username is already taken
+     * @throws EntityNotFoundException  when one of the user's roles does not exist
+     * Nothing is saved when an exception is thrown.
+     */
     public User create(User user)
     {
         try (EntityManager em = emf.createEntityManager())
         {
             em.getTransaction().begin();
-            Set<Role> newRoleSet = new HashSet<>();
-            if (user.getRoles().isEmpty())
+            try
             {
-                Role userRole = em.find(Role.class, "user");
-                if (userRole == null)
+                if (em.find(User.class, user.getUsername()) != null)
                 {
-                    // sets default user role
-                    userRole = new Role("user");
-                    em.persist(userRole);
+                    throw new ApiException(409, "Username " + user.getUsername() + " is already taken");
                 }
-                user.addRole(userRole);
+                Set<Role> newRoleSet = new HashSet<>();
+                if (user.getRoles().isEmpty())
+                {
+                    Role userRole = em.find(Role.class, "user");
+                    if (userRole == null)
+                    {
+                        // sets default user role
+                        userRole = new Role("user");
+                        em.persist(userRole);
+                    }
+                    user.addRole(userRole);
+                }
+                user.getRoles().forEach(role ->
+                {
+                    Role foundRole = em.find(Role.class, role.getName());
+                    if (foundRole == null)
+                    {
+                        throw new EntityNotFoundException("No role found with that id");
+                    } else
+                    {
+                        newRoleSet.add(foundRole);
+                    }
+                });
+                user.setRoles(newRoleSet);
+                em.persist(user);
+                em.getTransaction().commit();
+                return user;
+            } catch (RuntimeException ex)
+            {
+                if (em.getTransaction().isActive())
+                {
+                    em.getTransaction().rollback();
+                }
+                throw ex;
             }
-            user.getRoles().forEach(role ->
-            {
-                Role foundRole = em.find(Role.class, role.getName());
-                if (foundRole == null)
-                {
-                    throw new EntityNotFoundException("No role found with that id");
-                } else
-                {
-                    newRoleSet.add(foundRole);
-                }
-            });
-            user.setRoles(newRoleSet);
-            em.persist(user);
-            em.getTransaction().commit();
-        } catch (Throwable ex)
-        {
-            ex.printStackTrace();
         }
-        return user;
     }
 
     public User read(String name)

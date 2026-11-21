@@ -149,6 +149,61 @@
           ]
         },
         {
+          "name": "Login as admin (200)",
+          "request": {
+            "description": "Logs in as the admin created at startup (ADMIN_PASSWORD in config.properties; set the environment's adminPassword to the same value). The jobs folder uses this token, because only an admin can create jobs and see or set salaries.",
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Returns a token\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.token).to.be.a(\"string\").and.not.empty;",
+                  "    pm.collectionVariables.set(\"adminToken\", json.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Login with wrong password (401)",
           "request": {
             "method": "POST",
@@ -4011,10 +4066,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4052,10 +4119,22 @@
               "path": [
                 "jobs"
               ]
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4091,10 +4170,22 @@
                 "jobs",
                 "{{jobId}}"
               ]
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4145,10 +4236,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4182,10 +4285,22 @@
                 "jobs",
                 "999999999"
               ]
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4235,10 +4350,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4287,10 +4414,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4339,10 +4478,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4391,10 +4542,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4443,10 +4606,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4495,10 +4670,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4547,10 +4734,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4599,10 +4798,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -5308,6 +5519,10 @@
   "variable": [
     {
       "key": "token",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
       "value": ""
     },
     {
