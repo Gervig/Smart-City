@@ -796,7 +796,7 @@ _Migrator tests:_ to be added
 
 The project has a continuous integration pipeline on GitHub Actions, defined in
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml). It checks for integration errors by running the unit tests, the
-integration tests in code and the API tests automatically.
+integration tests in code, the API tests and the end-to-end UI tests automatically.
 
 ### When it runs
 
@@ -812,6 +812,7 @@ A newer push to the same branch cancels the run that is still going.
 |---|---|---|
 | **Unit and integration tests** | `mvn -B clean verify` on Java 17 | Surefire runs the unit tests. Failsafe runs the integration tests in `src/test/java/app/daos/`, which start PostgreSQL with Testcontainers (Docker is available on the GitHub runner). JaCoCo creates the coverage report |
 | **API tests** | Runs only if the first job passed. Starts PostgreSQL 16.2, loads the schema and the database users, starts the backend, and runs the Postman collection with Newman | The collection in `postman/` against the running API: status codes, response times, JSON content, positive and negative cases |
+| **End-to-end tests** | Runs only if the first job passed, in parallel with the API tests. Starts its own PostgreSQL and backend the same way, then runs the Playwright tests with a headless Chromium against the React frontend | The tests in `frontend/e2e/`: register, log in and out, and create, edit and delete records in the real UI |
 
 The API job follows the same steps as development:
 
@@ -827,6 +828,13 @@ The API job follows the same steps as development:
 
 The database is new on every run, as the collection expects (see the note at the top of the collection).
 
+The **end-to-end job** repeats steps 1 to 4 with its own database and backend (the jobs run on separate machines), and then:
+
+6. `npm ci` installs the frontend dependencies and `npx playwright install --with-deps chromium` installs the browser.
+7. `npm run e2e` runs the Playwright tests. Playwright starts the Vite dev server itself (`frontend/playwright.config.js`); the
+   frontend sends its API requests to `/backend`, which Vite forwards to the backend on port 7070. The tests drive the real
+   UI against the real backend and database, and create their own test users, so they do not depend on the API job.
+
 ### No secrets are needed
 
 All values in the workflow (database passwords, the JWT secret, the admin password) are throw-away values that exist only
@@ -835,16 +843,18 @@ pipeline ever needs one, add it under **Settings → Secrets and variables → A
 
 ### Read the result
 
-1. Open the **Actions** tab on GitHub and select a run. A green check means both jobs passed.
+1. Open the **Actions** tab on GitHub and select a run. A green check means all three jobs passed.
 2. Open a job to see the output of every step. The `mvn` step lists every test class, and the Newman step prints the
    same request-by-request report as the Postman runner, with a summary table of requests and assertions at the end.
 3. Under **Artifacts** at the bottom of the run page you can download:
    - `maven-test-reports`: the Surefire and Failsafe reports and the JaCoCo coverage report (`target/site/jacoco/index.html`),
-   - `api-test-results`: `newman-results.xml` (JUnit format) and `app.log`, the backend's log during the API tests.
+   - `api-test-results`: `newman-results.xml` (JUnit format) and `app.log`, the backend's log during the API tests,
+   - `e2e-test-results`: the Playwright HTML report (`playwright-report/index.html`), and on a failure the screenshots and
+     traces in `test-results/`, plus `app.log`. Open a trace with `npx playwright show-trace <trace.zip>`.
 
 A pull request shows the result as a check at the bottom of the page. To make a green run required before a pull request
 can be merged into `dev`, enable it under **Settings → Branches → Branch protection rules** (require status checks,
-and select both jobs).
+and select all three jobs).
 
 ### Run the same steps on your own computer
 
@@ -879,13 +889,21 @@ npx newman run postman/SmartCity.postman_collection.json -e postman/SmartCity.lo
 
 The collection needs an empty database, so reset it first (see [`docker/README.md`](docker/README.md)) if you ran it before.
 
+End-to-end tests, with the backend running as above (see [End-to-end tests with Playwright](#end-to-end-tests-with-playwright)):
+
+```text
+cd frontend
+npm ci
+npx playwright install chromium
+npm run e2e
+```
+
 ### What is not in the pipeline
 
 | Not included | Why |
 |---|---|
 | Stress, load and spike tests | They take a long time, give unreliable numbers on a shared runner, and need a known environment. They are run by hand and documented separately |
 | SonarQube | It runs on a local server that the runner cannot reach. The analysis is run locally (see [Static analysis with SonarQube](#static-analysis-with-sonarqube)) |
-| Playwright end-to-end tests | They need the frontend and backend running together. They are run locally with `npm run e2e` (see [End-to-end tests with Playwright](#end-to-end-tests-with-playwright)) |
 | Migrator tests | The migrator is a separate Maven project, so the root `mvn clean verify` does not run them. Run `mvn verify` in `migrator/` |
 
 ### Troubleshooting the pipeline
@@ -897,6 +915,8 @@ The collection needs an empty database, so reset it first (see [`docker/README.m
 | "Backend did not start in 60 seconds" | The step prints `app.log`. Common causes: a missing table (the schema step failed), or a wrong value in the `env:` block |
 | Newman: `Login as admin` returns 401 | `ADMIN_PASSWORD` in `ci.yml` and `adminPassword` in `postman/SmartCity.local.postman_environment.json` must be the same |
 | A Postman request fails only in CI | Download `api-test-results` and read `app.log` for the backend's side of the request |
+| The end-to-end job fails | Download `e2e-test-results` and open `playwright-report/index.html`: it shows the failing test with a screenshot and a trace. Check `app.log` for the backend's side. The tests need an empty database, which every CI run has |
+| `npx playwright install` fails | The step needs the runner's package manager for the browser's system libraries (`--with-deps`). Rerun the job; it is usually a temporary download problem |
 | The first run is slow | Dependencies (including TokenSecurity from JitPack) are downloaded. Maven packages are cached for later runs |
 
 ## More documentation
