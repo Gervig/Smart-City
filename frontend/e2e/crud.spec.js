@@ -1,5 +1,21 @@
 import { expect, test } from '@playwright/test'
-import { fillForm, signIn, uniqueName } from './helpers.js'
+import { assertResponseStatus, fillForm, signIn, uniqueName } from './helpers.js'
+
+function headerCell(button)
+{
+  return button.locator('xpath=..')
+}
+
+async function waitForTable(page, testId)
+{
+  const table = page.getByTestId(testId)
+  const error = page.getByTestId('error')
+  await table.or(error).waitFor({ state: 'visible' })
+  if (await error.isVisible())
+  {
+    throw new Error(`Loading ${testId} failed: ${await error.innerText()}`)
+  }
+}
 
 test.describe('CRUD pages', () =>
 {
@@ -15,17 +31,23 @@ test.describe('CRUD pages', () =>
     await page.goto('/families')
 
     await fillForm(page, { familyName: name })
+    await expect(page.getByTestId('notice')).toHaveText('Created.')
+    await page.getByTestId('filter-familyName').fill(name)
+    await page.getByRole('button', { name: 'Apply filters' }).click()
     const row = page.getByTestId('row').filter({ hasText: name })
     await expect(row).toBeVisible()
-    await expect(page.getByTestId('notice')).toHaveText('Created.')
 
     await row.getByTestId('edit').click()
     await fillForm(page, { familyName: renamed })
+    await expect(page.getByTestId('notice')).toHaveText('Updated.')
+    await page.getByTestId('filter-familyName').fill(renamed)
+    await page.getByRole('button', { name: 'Apply filters' }).click()
     const renamedRow = page.getByTestId('row').filter({ hasText: renamed })
     await expect(renamedRow).toBeVisible()
     await expect(page.getByTestId('row').filter({ hasText: `${name}` }).filter({ hasNotText: 'renamed' })).toHaveCount(0)
 
     await renamedRow.getByTestId('delete').click()
+    await expect(page.getByTestId('notice')).toHaveText('Deleted.')
     await expect(page.getByTestId('row').filter({ hasText: renamed })).toHaveCount(0)
   })
 
@@ -47,8 +69,12 @@ test.describe('CRUD pages', () =>
     })
 
     await page.goto('/families')
-    const familyNameColumn = page.getByRole('columnheader').filter({ has: page.getByRole('button', { name: /Family name/ }) })
-    await familyNameColumn.getByRole('button').click()
+    await waitForTable(page, 'families-table')
+    const familyIdButton = page.getByRole('button', { name: /^ID/ })
+    await expect(headerCell(familyIdButton)).toHaveAttribute('aria-sort', 'ascending')
+    const familyNameButton = page.getByRole('button', { name: /Family name/ })
+    const familyNameColumn = headerCell(familyNameButton)
+    await familyNameButton.click()
     await expect(familyNameColumn).toHaveAttribute('aria-sort', 'ascending')
 
     const familyFilterRequest = page.waitForRequest((request) =>
@@ -64,15 +90,18 @@ test.describe('CRUD pages', () =>
     const citizenUrl = new URL((await citizenRequest).url())
     expect(citizenUrl.searchParams.get('sort')).toBe('id,asc')
     expect(citizenUrl.searchParams.has('familyName')).toBe(false)
-    const citizenIdColumn = page.getByRole('columnheader').filter({ has: page.getByRole('button', { name: /^ID/ }) })
+    await waitForTable(page, 'citizens-table')
+    const citizenIdButton = page.getByRole('button', { name: /^ID/ })
+    const citizenIdColumn = headerCell(citizenIdButton)
     await expect(citizenIdColumn).toHaveAttribute('aria-sort', 'ascending')
-    const lastNameColumn = page.getByRole('columnheader').filter({ has: page.getByRole('button', { name: /Last name/ }) })
+    const lastNameButton = page.getByRole('button', { name: /Last name/ })
+    const lastNameColumn = headerCell(lastNameButton)
     await expect(lastNameColumn).toHaveAttribute('aria-sort', 'none')
 
     const lastNameRequest = page.waitForRequest((request) =>
       new URL(request.url()).pathname === '/backend/citizens'
       && new URL(request.url()).searchParams.get('sort') === 'lastName,asc')
-    await lastNameColumn.getByRole('button').click()
+    await lastNameButton.click()
     await lastNameRequest
 
     const locationRequest = page.waitForRequest((request) =>
@@ -83,11 +112,15 @@ test.describe('CRUD pages', () =>
     expect(locationUrl.searchParams.has('familyName')).toBe(false)
     expect(locationUrl.searchParams.has('lastName')).toBe(false)
 
-    const streetAddressColumn = page.getByRole('columnheader').filter({ has: page.getByRole('button', { name: /Street address/ }) })
+    await waitForTable(page, 'locations-table')
+    const locationIdButton = page.getByRole('button', { name: /^ID/ })
+    await expect(headerCell(locationIdButton)).toHaveAttribute('aria-sort', 'ascending')
+    const streetAddressButton = page.getByRole('button', { name: /Street address/ })
+    const streetAddressColumn = headerCell(streetAddressButton)
     const streetAddressRequest = page.waitForRequest((request) =>
       new URL(request.url()).pathname === '/backend/locations'
       && new URL(request.url()).searchParams.get('sort') === 'streetAddress,asc')
-    await streetAddressColumn.getByRole('button').click()
+    await streetAddressButton.click()
     await streetAddressRequest
 
     const housingRequest = page.waitForRequest((request) =>
@@ -98,6 +131,9 @@ test.describe('CRUD pages', () =>
     expect(housingUrl.searchParams.has('familyName')).toBe(false)
     expect(housingUrl.searchParams.has('lastName')).toBe(false)
     expect(housingUrl.searchParams.has('streetAddress')).toBe(false)
+    await waitForTable(page, 'housings-table')
+    const housingIdButton = page.getByRole('button', { name: /^ID/ })
+    await expect(headerCell(housingIdButton)).toHaveAttribute('aria-sort', 'ascending')
     expect(listRequests.some((url) => new URL(url).searchParams.get('sort') === 'familyName,asc')).toBe(true)
   })
 
@@ -150,12 +186,19 @@ test.describe('CRUD pages', () =>
     const place = uniqueName('Place')
     await page.goto('/locations')
     await fillForm(page, { name: place, streetAddress: 'Testvej 1' })
+    await expect(page.getByTestId('notice')).toHaveText('Created.')
+    await page.getByTestId('filter-name').fill(place)
+    await page.getByRole('button', { name: 'Apply filters' }).click()
     const locationRow = page.getByTestId('row').filter({ hasText: place })
     await expect(locationRow).toBeVisible()
     const locationId = await locationRow.locator('td').first().innerText()
 
     await page.getByRole('link', { name: 'Housings' }).click()
     await fillForm(page, { locationId, housingType: 'apartment', capacity: 4 })
+    await expect(page.getByTestId('notice')).toHaveText('Created.')
+    await page.getByTestId('filter-locationId').fill(locationId)
+    await page.getByTestId('filter-housingType').selectOption('apartment')
+    await page.getByRole('button', { name: 'Apply filters' }).click()
 
     await expect(page.getByTestId('row').filter({ hasText: 'apartment' }).filter({ hasText: locationId }).first()).toBeVisible()
   })
@@ -164,7 +207,7 @@ test.describe('CRUD pages', () =>
   {
     await page.goto('/housings')
 
-    await fillForm(page, { housingType: 'house', capacity: 0 })
+    await fillForm(page, { housingType: 'house', capacity: 0 }, { expected: 'error' })
 
     await expect(page.getByTestId('error')).toContainText('capacity must be at least 1')
   })
@@ -174,11 +217,16 @@ test.describe('CRUD pages', () =>
     const family = uniqueName('CitFam')
     await page.goto('/families')
     await fillForm(page, { familyName: family })
+    await page.getByTestId('filter-familyName').fill(family)
+    await page.getByRole('button', { name: 'Apply filters' }).click()
     const familyId = await page.getByTestId('row').filter({ hasText: family }).locator('td').first().innerText()
 
     await page.getByRole('link', { name: 'Citizens' }).click()
     const first = uniqueName('Anna')
     await fillForm(page, { firstName: first, lastName: 'Hansen', birthDate: '1990-05-17', status: 'alive', gender: 'female', familyId })
+    await expect(page.getByTestId('notice')).toHaveText('Created.')
+    await page.getByTestId('filter-familyId').fill(familyId)
+    await page.getByRole('button', { name: 'Apply filters' }).click()
 
     const row = page.getByTestId('row').filter({ hasText: first })
     await expect(row).toBeVisible()
@@ -192,7 +240,7 @@ test.describe('CRUD pages', () =>
     const pageResponse = await request.get('/backend/citizens?page=0&size=1&sort=id,desc', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    expect(pageResponse.status()).toBe(200)
+    await assertResponseStatus(pageResponse, 200, 'Paginated citizen GET')
     const pageResult = await pageResponse.json()
     expect(pageResult).toMatchObject({ page: 0, size: 1 })
     expect(Array.isArray(pageResult.data)).toBe(true)
@@ -202,22 +250,25 @@ test.describe('CRUD pages', () =>
     const invalidSort = await request.get('/backend/citizens?sort=unsupported,asc', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    expect(invalidSort.status()).toBe(400)
+    await assertResponseStatus(invalidSort, 400, 'Invalid sort GET')
 
     const invalidFilter = await request.get('/backend/citizens?unknownFilter=value', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    expect(invalidFilter.status()).toBe(400)
+    await assertResponseStatus(invalidFilter, 400, 'Invalid filter GET')
 
     const familyName = uniqueName('FilterFam')
     await page.goto('/families')
     await fillForm(page, { familyName })
+    await page.getByTestId('filter-familyName').fill(familyName)
+    await page.getByRole('button', { name: 'Apply filters' }).click()
     const familyId = await page.getByTestId('row').filter({ hasText: familyName }).locator('td').first().innerText()
 
     const lastName = uniqueName('FilterLast')
     await page.goto('/citizens')
+    const firstName = uniqueName('FilterFirst')
     await fillForm(page, {
-      firstName: uniqueName('FilterFirst'),
+      firstName,
       lastName,
       birthDate: '1990-05-17',
       status: 'alive',
@@ -225,14 +276,87 @@ test.describe('CRUD pages', () =>
       familyId,
     })
 
+    await expect(page.getByTestId('notice')).toHaveText('Created.')
+
+    // Add enough matching records to span the UI's fixed 20-row page size.
+    for (let index = 0; index < 20; index += 1)
+    {
+      const response = await request.post('/backend/citizens', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+          firstName: uniqueName('PageCitizen'),
+          lastName,
+          birthDate: '1990-05-17',
+          deathDate: null,
+          status: 'alive',
+          gender: 'female',
+          familyId,
+          housingId: null,
+        },
+      })
+      await assertResponseStatus(response, 201, `Create pagination record ${index + 1}`)
+    }
+
+    const ascendingPageResponse = await request.get('/backend/citizens?page=0&size=1&sort=id,asc', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    await assertResponseStatus(ascendingPageResponse, 200, 'Ascending citizen GET')
+    const ascendingPage = await ascendingPageResponse.json()
+    const newestPageResponse = await request.get('/backend/citizens?page=0&size=1&sort=id,desc', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    await assertResponseStatus(newestPageResponse, 200, 'Descending citizen GET')
+    const newestPage = await newestPageResponse.json()
+    expect(ascendingPage.data[0].id).toBeLessThan(newestPage.data[0].id)
+
+    const idButton = page.getByRole('button', { name: /^ID/ })
+    const descendingIdRequest = page.waitForRequest((request) =>
+      new URL(request.url()).pathname === '/backend/citizens'
+      && new URL(request.url()).searchParams.get('sort') === 'id,desc')
+    await idButton.click()
+    await descendingIdRequest
+    await expect(headerCell(idButton)).toHaveAttribute('aria-sort', 'descending')
+
+    const unfilteredNextPageRequest = page.waitForRequest((request) =>
+      new URL(request.url()).pathname === '/backend/citizens'
+      && new URL(request.url()).searchParams.get('page') === '1')
+    await page.getByRole('button', { name: 'Next' }).click()
+    await unfilteredNextPageRequest
+    await expect(page.locator('.pagination span')).toContainText(/^Page 2 of /)
+
+    const filteredRequest = page.waitForRequest((request) =>
+      new URL(request.url()).pathname === '/backend/citizens'
+      && new URL(request.url()).searchParams.get('lastName') === lastName
+      && new URL(request.url()).searchParams.get('page') === '0')
     await page.getByTestId('filter-lastName').fill(lastName)
     await page.getByRole('button', { name: 'Apply filters' }).click()
-    await expect(page.getByTestId('row').filter({ hasText: lastName })).toBeVisible()
+    await filteredRequest
+    await expect(page.getByTestId('row').filter({ hasText: lastName }).first()).toBeVisible()
+    await expect(page.locator('.pagination span')).toHaveText('Page 1 of 2 (20 records displayed out of 21 total)')
 
-    const lastNameColumn = page.getByRole('columnheader').filter({ has: page.getByRole('button', { name: /Last name/ }) })
-    await lastNameColumn.getByRole('button').click()
+    const filteredNextPageRequest = page.waitForRequest((request) =>
+      new URL(request.url()).pathname === '/backend/citizens'
+      && new URL(request.url()).searchParams.get('lastName') === lastName
+      && new URL(request.url()).searchParams.get('page') === '1')
+    await page.getByRole('button', { name: 'Next' }).click()
+    await filteredNextPageRequest
+    await expect(page.locator('.pagination span')).toHaveText('Page 2 of 2 (1 records displayed out of 21 total)')
+    await expect(page.getByTestId('row').filter({ hasText: firstName })).toBeVisible()
+
+    const lastNameButton = page.getByRole('button', { name: /Last name/ })
+    const lastNameColumn = headerCell(lastNameButton)
+    const ascendingLastNameRequest = page.waitForRequest((request) =>
+      new URL(request.url()).pathname === '/backend/citizens'
+      && new URL(request.url()).searchParams.get('sort') === 'lastName,asc')
+    await lastNameButton.click()
+    await ascendingLastNameRequest
     await expect(lastNameColumn).toHaveAttribute('aria-sort', 'ascending')
-    await lastNameColumn.getByRole('button').click()
+
+    const descendingLastNameRequest = page.waitForRequest((request) =>
+      new URL(request.url()).pathname === '/backend/citizens'
+      && new URL(request.url()).searchParams.get('sort') === 'lastName,desc')
+    await lastNameButton.click()
+    await descendingLastNameRequest
     await expect(lastNameColumn).toHaveAttribute('aria-sort', 'descending')
   })
 
@@ -240,7 +364,7 @@ test.describe('CRUD pages', () =>
   {
     await page.goto('/citizens')
 
-    await fillForm(page, { firstName: 'Future', lastName: 'Person', birthDate: '2999-01-01', status: 'alive' })
+    await fillForm(page, { firstName: 'Future', lastName: 'Person', birthDate: '2999-01-01', status: 'alive' }, { expected: 'error' })
 
     await expect(page.getByTestId('error')).toContainText('birthDate must not be in the future')
   })
@@ -249,7 +373,7 @@ test.describe('CRUD pages', () =>
   {
     await page.goto('/citizens')
 
-    await fillForm(page, { firstName: 'Zombie', lastName: 'Person', birthDate: '1980-01-01', deathDate: '2020-01-01', status: 'alive' })
+    await fillForm(page, { firstName: 'Zombie', lastName: 'Person', birthDate: '1980-01-01', deathDate: '2020-01-01', status: 'alive' }, { expected: 'error' })
 
     await expect(page.getByTestId('error')).toContainText('deathDate must be null when status is alive')
   })
@@ -258,7 +382,7 @@ test.describe('CRUD pages', () =>
   {
     await page.goto('/citizens')
 
-    await fillForm(page, { lastName: 'Nameless', birthDate: '1980-01-01', status: 'alive' })
+    await fillForm(page, { lastName: 'Nameless', birthDate: '1980-01-01', status: 'alive' }, { expected: 'error' })
 
     await expect(page.getByTestId('error')).toContainText('firstName is required')
   })
