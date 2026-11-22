@@ -930,3 +930,4 @@ The collection needs an empty database, so reset it first (see [`docker/README.m
 | Port 5173 is already in use | Stop the other Vite process; the dev server is configured with `strictPort`. |
 | Playwright tests time out waiting for the page | Check that the backend is up and that the Docker database is running with the schema loaded. |
 | Overpass request fails or times out | The public service may be busy or rate-limiting requests. Retry later, or configure another compatible endpoint with `OVERPASS_URL`. |
+
