@@ -792,7 +792,112 @@ _Migrator tests:_ to be added
 
 ## Continuous integration and delivery
 
-No CI/CD workflow is currently checked into this repository. Before submitting changes, run `mvn clean verify`; this runs the Surefire tests and, with Docker available, the PostgreSQL-backed Failsafe tests. The Playwright tests are run separately with `npm run e2e` in `frontend/` while the backend is running.
+![CI](https://github.com/Gervig/Smart-City/actions/workflows/ci.yml/badge.svg)
+
+The project has a continuous integration pipeline on GitHub Actions, defined in
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml). It checks for integration errors by running the unit tests, the
+integration tests in code and the API tests automatically.
+
+### When it runs
+
+- on every push to `dev` or `main`,
+- on every pull request into `dev` or `main`, so a branch is tested before it is merged,
+- by hand, from the **Actions** tab (**CI**, then **Run workflow**).
+
+A newer push to the same branch cancels the run that is still going.
+
+### The jobs
+
+| Job | What it does | Tests |
+|---|---|---|
+| **Unit and integration tests** | `mvn -B clean verify` on Java 17 | Surefire runs the unit tests. Failsafe runs the integration tests in `src/test/java/app/daos/`, which start PostgreSQL with Testcontainers (Docker is available on the GitHub runner). JaCoCo creates the coverage report |
+| **API tests** | Runs only if the first job passed. Starts PostgreSQL 16.2, loads the schema and the database users, starts the backend, and runs the Postman collection with Newman | The collection in `postman/` against the running API: status codes, response times, JSON content, positive and negative cases |
+
+The API job follows the same steps as development:
+
+1. A PostgreSQL 16.2 service container with the database `smart_city`.
+2. `SQL/schema/database_schema.sql` creates the tables (Hibernate only validates them).
+3. `SQL/users/08_users.sql` creates the database users. The backend connects as `smartcity_app`, the least-privilege
+   application user, so the API tests also prove that this user has the rights the application needs.
+4. `mvn -B -DskipTests package` builds `target/app.jar`, which is started in the background. It reads its settings
+   from environment variables because `DEPLOYED` is set, so no `config.properties` is needed on the runner.
+5. `newman run postman/SmartCity.postman_collection.json -e postman/SmartCity.local.postman_environment.json` runs the
+   collection against `http://localhost:7070`. It creates the `admin` user from `ADMIN_PASSWORD`, which must be the same
+   value as `adminPassword` in the Postman environment (`Admin123!`).
+
+The database is new on every run, as the collection expects (see the note at the top of the collection).
+
+### No secrets are needed
+
+All values in the workflow (database passwords, the JWT secret, the admin password) are throw-away values that exist only
+for the duration of a run, in a database that is discarded afterwards. Never put real credentials in `ci.yml`; if the
+pipeline ever needs one, add it under **Settings → Secrets and variables → Actions** and use `${{ secrets.NAME }}`.
+
+### Read the result
+
+1. Open the **Actions** tab on GitHub and select a run. A green check means both jobs passed.
+2. Open a job to see the output of every step. The `mvn` step lists every test class, and the Newman step prints the
+   same request-by-request report as the Postman runner, with a summary table of requests and assertions at the end.
+3. Under **Artifacts** at the bottom of the run page you can download:
+   - `maven-test-reports`: the Surefire and Failsafe reports and the JaCoCo coverage report (`target/site/jacoco/index.html`),
+   - `api-test-results`: `newman-results.xml` (JUnit format) and `app.log`, the backend's log during the API tests.
+
+A pull request shows the result as a check at the bottom of the page. To make a green run required before a pull request
+can be merged into `dev`, enable it under **Settings → Branches → Branch protection rules** (require status checks,
+and select both jobs).
+
+### Run the same steps on your own computer
+
+Unit and integration tests (Docker Desktop must be running):
+
+```text
+mvn clean verify
+```
+
+API tests, from the project root, with the Docker databases from [Step 2](#step-2-databases-docker) running and the
+schema and users loaded:
+
+```text
+mvn -DskipTests package
+$env:DEPLOYED = "true"
+$env:DB_NAME = "smart_city"
+$env:CONNECTION_STR = "jdbc:postgresql://localhost:5432/"
+$env:DB_USERNAME = "smartcity_app"
+$env:DB_PASSWORD = "app-dev-password"
+$env:ISSUER = "smart-city-local"
+$env:TOKEN_EXPIRE_TIME = "1800000"
+$env:SECRET_KEY = "a-local-secret-key-of-at-least-32-characters"
+$env:ADMIN_PASSWORD = "Admin123!"
+java -jar target/app.jar
+```
+
+In a second terminal:
+
+```text
+npx newman run postman/SmartCity.postman_collection.json -e postman/SmartCity.local.postman_environment.json
+```
+
+The collection needs an empty database, so reset it first (see [`docker/README.md`](docker/README.md)) if you ran it before.
+
+### What is not in the pipeline
+
+| Not included | Why |
+|---|---|
+| Stress, load and spike tests | They take a long time, give unreliable numbers on a shared runner, and need a known environment. They are run by hand and documented separately |
+| SonarQube | It runs on a local server that the runner cannot reach. The analysis is run locally (see [Static analysis with SonarQube](#static-analysis-with-sonarqube)) |
+| Playwright end-to-end tests | They need the frontend and backend running together. They are run locally with `npm run e2e` (see [End-to-end tests with Playwright](#end-to-end-tests-with-playwright)) |
+| Migrator tests | The migrator is a separate Maven project, so the root `mvn clean verify` does not run them. Run `mvn verify` in `migrator/` |
+
+### Troubleshooting the pipeline
+
+| Problem | Check |
+|---|---|
+| The first job fails in a Testcontainers test | Look for the first exception in the step output. A single failing test names the class and method; fix it locally with `mvn clean verify` |
+| The API job fails at "Create the database schema" | The `psql` step stops at the first SQL error and prints it. Run the same script locally against an empty database |
+| "Backend did not start in 60 seconds" | The step prints `app.log`. Common causes: a missing table (the schema step failed), or a wrong value in the `env:` block |
+| Newman: `Login as admin` returns 401 | `ADMIN_PASSWORD` in `ci.yml` and `adminPassword` in `postman/SmartCity.local.postman_environment.json` must be the same |
+| A Postman request fails only in CI | Download `api-test-results` and read `app.log` for the backend's side of the request |
+| The first run is slow | Dependencies (including TokenSecurity from JitPack) are downloaded. Maven packages are cached for later runs |
 
 ## More documentation
 
