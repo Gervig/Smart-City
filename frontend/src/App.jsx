@@ -42,7 +42,7 @@ export default function App() {
           <Route path="/login" element={token ? <Navigate to="/families" replace /> : <AuthPage mode="login" />} />
           <Route path="/register" element={token ? <Navigate to="/families" replace /> : <AuthPage mode="register" />} />
           {RESOURCES.map((r) => (
-            <Route key={r.key} path={`/${r.key}`} element={<Protected><CrudPage resource={r} /></Protected>} />
+            <Route key={r.key} path={`/${r.key}`} element={<Protected><CrudPage key={r.key} resource={r} /></Protected>} />
           ))}
           <Route path="/nearby" element={<Protected><NearbyPage /></Protected>} />
           <Route path="*" element={<Navigate to={token ? '/families' : '/login'} replace />} />

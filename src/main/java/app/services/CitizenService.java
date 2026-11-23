@@ -1,5 +1,7 @@
 package app.services;
 
+import java.util.Map;
+
 import app.daos.GenericDAO;
 import app.dtos.CitizenDTO;
 import app.dtos.CitizenRequestDTO;
@@ -22,6 +24,34 @@ public class CitizenService extends AbstractCrudService<Citizen, CitizenDTO, Cit
     @Override
     protected void validate(CitizenRequestDTO request) {
         CitizenValidator.validate(request);
+    }
+
+
+    @Override
+    protected Map<String, String> allowedFilters() {
+        return Map.of(
+                "status", "status",
+                "lastName", "lastName",
+                "birthDateFrom", "birthDate",
+                "birthDateTo", "birthDate",
+                "familyId", "family.id",
+                "housingId", "housing.id"
+        );
+    }
+
+    @Override
+    protected Map<String, String> allowedSortFields() {
+        return Map.of(
+                "id", "id",
+                "firstName", "firstName",
+                "lastName", "lastName",
+                "birthDate", "birthDate",
+                "deathDate", "deathDate",
+                "status", "status",
+                "gender", "gender",
+                "familyId", "family.id",
+                "housingId", "housing.id"
+        );
     }
 
     @Override

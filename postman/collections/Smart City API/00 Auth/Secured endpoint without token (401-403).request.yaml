@@ -14,4 +14,4 @@ scripts:
           pm.expect(pm.response.responseTime).to.be.below(1500);
       });
     language: text/javascript
-order: 5000
+order: 6000

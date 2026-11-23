@@ -230,7 +230,7 @@ Thirteen points are open: nine questions about the specification and four tool d
 | OI-01 | Specification | The hand-in deadline is 7 December 2026 in this SRS, but the assignment text says 13 December 2026, 23:59. Which is correct? | SRS review | Open |
 | OI-02 | Specification | What exactly does the Overpass enrichment return (which place types, which radius) and where does the user see it? (FR-18) | SRS review | Open |
 | OI-03 | Specification | What are the password rules? The minimum of 8 characters in FR-01 is a proposal. | SRS review | Open |
-| OI-04 | Specification | Is logout only done in the frontend, or does the backend also invalidate the token? (FR-03) | SRS review | Open |
+| OI-04 | Specification | Is logout only done in the frontend, or does the backend also invalidate the token? (FR-03) | SRS review | Resolved: the backend also invalidates it. `POST /api/auth/logout` puts the token's id (jti) on a denylist until it expires; a logged-out token gives 401. |
 | OI-05 | Specification | Are 500 ms, 100 citizens and 50 concurrent users the right numbers for NFR-04? | SRS review | Open |
 | OI-06 | Specification | Can a housing unit hold only one citizen, or several? This decides what "occupied" means in FR-13. | SRS review | Open |
 | OI-07 | Specification | Does "retire" a citizen (FR-10) keep the record, and can an administrator delete one for good? | SRS review | Open |

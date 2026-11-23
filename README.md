@@ -135,11 +135,14 @@ DB_PASSWORD=your_local_database_password
 ISSUER=smart-city-local
 TOKEN_EXPIRE_TIME=1800000
 SECRET_KEY=replace-with-a-long-random-secret
+ADMIN_PASSWORD=choose-a-local-admin-password
 ```
+
+On every start the application creates what is missing: the roles `user` and `admin`, the user `admin` (only when `ADMIN_PASSWORD` is set) and the test users `User1` / `Password123` and `User2` / `Password456`. Existing rows are left alone, so a restart adds nothing.
 
 `TOKEN_EXPIRE_TIME` is in milliseconds. Use a unique random `SECRET_KEY` outside local development; never put real credentials or signing keys in source control. The repository's `.gitignore` excludes `src/main/resources/config.properties`.
 
-For deployment, set `DEPLOYED` and provide `DB_NAME`, `CONNECTION_STR`, `DB_USERNAME`, `DB_PASSWORD`, `ISSUER`, `TOKEN_EXPIRE_TIME`, and `SECRET_KEY` as environment variables. `OVERPASS_URL` is optional; when unset, the application uses the public Overpass interpreter endpoint.
+For deployment, set `DEPLOYED` and provide `DB_NAME`, `CONNECTION_STR`, `DB_USERNAME`, `DB_PASSWORD`, `ISSUER`, `TOKEN_EXPIRE_TIME`, `SECRET_KEY` and `ADMIN_PASSWORD` as environment variables. `OVERPASS_URL` is optional; when unset, the application uses the public Overpass interpreter endpoint.
 
 ## Step 3: Backend
 
@@ -261,6 +264,8 @@ Code coverage doesn't match the real picture, code for controllers and routes ha
 
 Import `postman/SmartCity.postman_collection.json` and the local environment from `postman/SmartCity.local.postman_environment.json`. Set the environment's base URL to `http://localhost:7070`, start the application, and use the collection's auth requests to register or log in before calling protected routes. The collection includes CRUD, authentication, nearby-place, and cleanup requests.
 
+The `09 Jobs` folder uses an admin token, because only an admin can create jobs and see or set salaries. `00 Auth` gets it with "Login as admin", which uses the environment variable `adminPassword` (default `Admin123!`). It must match `ADMIN_PASSWORD` in your `config.properties`; change one of them if yours differs.
+
 ### Screenshot of Postman collection run
 ![docs/postman1.png](docs/postman1.png)
 
@@ -296,7 +301,7 @@ Notes:
 
 - A `401` from the API logs the user out and returns to the login page.
 - Dates from the API may arrive as `[year, month, day]` arrays; the frontend shows them as `yyyy-mm-dd`.
-- The CRUD routes have no route roles on the server (see [API reference](#api-reference)), so the login redirect is a frontend convenience, not access control.
+- Access control is done by the backend (see [Role rules](#role-rules)): a normal user cannot see salaries or create jobs. The login redirect is only a frontend convenience.
 - Elements carry `data-testid` attributes that the tests use as selectors.
 
 ## End-to-end tests with Playwright
@@ -365,6 +370,27 @@ The negative tests assert the validation messages from `src/main/java/app/valida
 
 All CRUD endpoints below are registered at the application root. Each resource supports `GET /<resource>`, `GET /<resource>/{id}`, `POST /<resource>`, `PUT /<resource>/{id}`, and `DELETE /<resource>/{id}`.
 
+### Role rules
+
+Users and administrators have full CRUD on all city data. The exception is a job's salary, which only administrators can see and set.
+
+| Action | `ANYONE` (no token) | `USER` | `ADMIN` |
+|---|---|---|---|
+| `POST /api/auth/register`, `POST /api/auth/login` | Yes | Yes | Yes |
+| `GET`, `POST`, `PUT`, `DELETE` on every CRUD resource except jobs, and `GET /locations/{id}/nearby` | 401 | Yes | Yes |
+| `GET /jobs`, `GET /jobs/{id}` | 401 | Yes, `salary` is `null` | Yes, with salary |
+| `PUT /jobs/{id}` | 401 | Yes, without `salary` (the stored salary is kept); sending a salary gives 403 | Yes |
+| `DELETE /jobs/{id}` | 401 | Yes | Yes |
+| `POST /jobs` (a job needs a salary) | 401 | 403 | Yes |
+| `POST /api/admin/seed/*` | 401 | 403 | Yes |
+| `POST /api/auth/logout` | 401 | Yes | Yes |
+
+A missing, malformed, expired, tampered or logged-out token gives 401; a valid token without the needed role gives 403. The route roles are set in `Routes.java` (`USERS` and `ADMINS`) and the salary rule in `JobController.java`. It is the API counterpart of the database user `smartcity_restricted`, which can read every `job` column except `salary` (`SQL/users/08_users.sql`).
+
+### Logout
+
+`POST /api/auth/logout` ends the token sent in the `Authorization` header. Every token has a unique id (the `jti` claim); logout puts that id on a denylist until the token's expiry time, and the authorize filter rejects any token on the list with 401. Other tokens of the same user keep working. The denylist is kept in memory, so a restart clears it; a logged-out token is then accepted again until it expires (at most `TOKEN_EXPIRE_TIME`).
+
 | Resource | Path |
 |---|---|
 | Locations | `/locations` |
@@ -377,17 +403,38 @@ All CRUD endpoints below are registered at the application root. Each resource s
 | Education records | `/education-records` |
 | Jobs | `/jobs` |
 
+Collection endpoints support zero-based pagination and filtering with `page` (default `0`), `size` (default `20`, maximum `100`), and `sort=field,asc|desc` (default `id,asc`). They return a JSON envelope containing `data`, `page`, `size`, `totalElements`, and `totalPages`; counts include all matching records. For example:
+
+```text
+GET /citizens?page=0&size=20&sort=familyId,asc&lastName=smith&birthDateFrom=1980-01-01&birthDateTo=2000-12-31
+```
+
+Sort and filter names are allowlisted per resource; relationship ID fields such as `familyId`, `housingId`, and `locationId` address the related entity IDs. Unsupported fields, invalid filter values, invalid page or size values, and invalid sort directions return HTTP 400. A page beyond the last page returns an empty `data` array. String filters use case-insensitive partial matching. Available filters are:
+
+| Resource | Filters |
+|---|---|
+| Citizens | `status`, `lastName`, `birthDateFrom`, `birthDateTo`, `familyId`, `housingId` |
+| Families | `familyName` |
+| Housings | `locationId`, `housingType`, `capacityFrom`, `capacityTo` |
+| Locations | `name`, `streetAddress` |
+| Companies | `locationId`, `name`, `status`, `foundedDateFrom`, `foundedDateTo` |
+| Institutions | `locationId`, `name`, `type` |
+| Jobs | `citizenId`, `companyId`, `institutionId`, `title`, `status`, `salaryFrom`, `salaryTo`, `startDateFrom`, `startDateTo`, `endDateFrom`, `endDateTo` |
+| Education records | `citizenId`, `institutionId`, `startDateFrom`, `startDateTo`, `endDateFrom`, `endDateTo` |
+| Citizen relationships | `citizenId1`, `citizenId2`, `relationshipType`, `startDateFrom`, `startDateTo`, `endDateFrom`, `endDateTo` |
+
 | Method | Path | Access | Description |
 |---|---|---|---|
-| POST | `/api/auth/register` | Public | Register a user; new accounts receive the `user` role |
-| POST | `/api/auth/login` | Public | Verify credentials and return a JWT |
+| POST | `/api/auth/register` | Public | Register a user; new accounts receive the `user` role. 201 with username and roles; 400 for a missing username or password or a password under 8 characters; 409 for a taken username |
+| POST | `/api/auth/login` | Public | Verify credentials and return a JWT. 400 for a missing username or password; 401 for a wrong password or unknown user |
+| POST | `/api/auth/logout` | `USER`, `ADMIN` | Log out: the token in the request is rejected from now on |
 | GET | `/api/secured/demo` | `USER` | Verify a user token |
-| GET | `/locations/{id}/nearby?radius=1000&amenity=hospital` | No route role configured | Find nearby OSM places for a location |
+| GET | `/locations/{id}/nearby?radius=1000&amenity=hospital` | `USER`, `ADMIN` | Find nearby OSM places for a location |
 | POST | `/api/admin/seed/locations?south=...&west=...&north=...&east=...&amenity=hospital&limit=20` | `ADMIN` | Import named OSM locations; coordinates and query options are optional |
 | POST | `/api/admin/seed/fake?citizens=100&seed=42` | `ADMIN` | Generate deterministic related fake records |
 | POST | `/api/admin/seed/enrich` | `ADMIN` | Fill missing fields from OSM tags |
 
-For protected routes, send the token returned by login as `Authorization: Bearer <token>`. CRUD and nearby-place routes currently have no route roles configured; they should not be treated as access-controlled endpoints.
+For protected routes, send the token returned by login as `Authorization: Bearer <token>`. See [Role rules](#role-rules) for which role each route needs.
 
 Registration and login accept JSON credentials, for example:
 

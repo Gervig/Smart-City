@@ -42,3 +42,6 @@ src/main/resources/config.properties
 .venv
 /.postman
 docs/sonarqube.txt
+
+# Database backups
+/backups/

@@ -1,7 +1,12 @@
 package app.controllers;
 
+import java.util.List;
+
 import app.services.CrudService;
 import io.javalin.http.Context;
+
+import app.dtos.PageRequest;
+import app.dtos.PageResponse;
 
 public class CrudController<D, R> {
     private final CrudService<D, R> service;
@@ -13,24 +18,46 @@ public class CrudController<D, R> {
     }
 
     public void getAll(Context ctx) {
-        ctx.json(service.getAll());
+        PageRequest request = PageRequestParser.parse(ctx);
+        PageResponse<D> page = service.getAll(request);
+        List<D> visible = page.data().stream().map(dto -> present(ctx, dto)).toList();
+        ctx.json(new PageResponse<>(visible, page.page(), page.size(), page.totalElements(), page.totalPages()));
     }
 
     public void getById(Context ctx) {
-        ctx.json(service.getById(id(ctx)));
+        ctx.json(present(ctx, service.getById(id(ctx))));
     }
 
     public void create(Context ctx) {
-        ctx.status(201).json(service.create(ctx.bodyAsClass(requestType)));
+        ctx.status(201).json(present(ctx, service.create(ctx.bodyAsClass(requestType))));
     }
 
     public void update(Context ctx) {
-        ctx.json(service.update(id(ctx), ctx.bodyAsClass(requestType)));
+        Long id = id(ctx);
+        ctx.json(present(ctx, service.update(id, prepareUpdate(ctx, id, ctx.bodyAsClass(requestType)))));
     }
 
     public void delete(Context ctx) {
         service.delete(id(ctx));
         ctx.status(204);
+    }
+
+    /**
+     * Hook for a subclass to change what the caller gets back, for example to hide a field from some roles.
+     */
+    protected D present(Context ctx, D dto) {
+        return dto;
+    }
+
+    /**
+     * Hook for a subclass to check or change an update request before it is saved.
+     */
+    protected R prepareUpdate(Context ctx, Long id, R request) {
+        return request;
+    }
+
+    protected CrudService<D, R> service() {
+        return service;
     }
 
     private Long id(Context ctx) {

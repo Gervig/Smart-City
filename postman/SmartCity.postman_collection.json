@@ -149,6 +149,61 @@
           ]
         },
         {
+          "name": "Login as admin (200)",
+          "request": {
+            "description": "Logs in as the admin created at startup (ADMIN_PASSWORD in config.properties; set the environment's adminPassword to the same value). The jobs folder uses this token, because only an admin can create jobs and see or set salaries.",
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Returns a token\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.token).to.be.a(\"string\").and.not.empty;",
+                  "    pm.collectionVariables.set(\"adminToken\", json.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Login with wrong password (401)",
           "request": {
             "method": "POST",
@@ -467,10 +522,14 @@
                   "pm.test(\"Response time is below 1500 ms\", function () {",
                   "    pm.expect(pm.response.responseTime).to.be.below(1500);",
                   "});",
-                  "pm.test(\"Body is a non-empty array\", function () {",
+                  "pm.test(\"Body is a page envelope\", function () {",
                   "    var json = pm.response.json();",
-                  "    pm.expect(json).to.be.an(\"array\");",
-                  "    pm.expect(json.length).to.be.above(0);",
+                  "    pm.expect(json.data).to.be.an(\"array\");",
+                  "    pm.expect(json.data.length).to.be.above(0);",
+                  "    pm.expect(json.page).to.be.a(\"number\");",
+                  "    pm.expect(json.size).to.be.a(\"number\");",
+                  "    pm.expect(json.totalElements).to.be.a(\"number\");",
+                  "    pm.expect(json.totalPages).to.be.a(\"number\");",
                   "});"
                 ]
               }
@@ -800,10 +859,14 @@
                   "pm.test(\"Response time is below 1500 ms\", function () {",
                   "    pm.expect(pm.response.responseTime).to.be.below(1500);",
                   "});",
-                  "pm.test(\"Body is a non-empty array\", function () {",
+                  "pm.test(\"Body is a page envelope\", function () {",
                   "    var json = pm.response.json();",
-                  "    pm.expect(json).to.be.an(\"array\");",
-                  "    pm.expect(json.length).to.be.above(0);",
+                  "    pm.expect(json.data).to.be.an(\"array\");",
+                  "    pm.expect(json.data.length).to.be.above(0);",
+                  "    pm.expect(json.page).to.be.a(\"number\");",
+                  "    pm.expect(json.size).to.be.a(\"number\");",
+                  "    pm.expect(json.totalElements).to.be.a(\"number\");",
+                  "    pm.expect(json.totalPages).to.be.a(\"number\");",
                   "});"
                 ]
               }
@@ -1133,10 +1196,14 @@
                   "pm.test(\"Response time is below 1500 ms\", function () {",
                   "    pm.expect(pm.response.responseTime).to.be.below(1500);",
                   "});",
-                  "pm.test(\"Body is a non-empty array\", function () {",
+                  "pm.test(\"Body is a page envelope\", function () {",
                   "    var json = pm.response.json();",
-                  "    pm.expect(json).to.be.an(\"array\");",
-                  "    pm.expect(json.length).to.be.above(0);",
+                  "    pm.expect(json.data).to.be.an(\"array\");",
+                  "    pm.expect(json.data.length).to.be.above(0);",
+                  "    pm.expect(json.page).to.be.a(\"number\");",
+                  "    pm.expect(json.size).to.be.a(\"number\");",
+                  "    pm.expect(json.totalElements).to.be.a(\"number\");",
+                  "    pm.expect(json.totalPages).to.be.a(\"number\");",
                   "});"
                 ]
               }
@@ -1728,8 +1795,14 @@
                   "pm.test(\"Response time is below 1500 ms\", function () {",
                   "    pm.expect(pm.response.responseTime).to.be.below(1500);",
                   "});",
-                  "pm.test(\"Body is a non-empty array\", function () {",
-                  "    pm.expect(pm.response.json()).to.be.an(\"array\").that.is.not.empty;",
+                  "pm.test(\"Body is a page envelope\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data).to.be.an(\"array\");",
+                  "    pm.expect(json.data.length).to.be.above(0);",
+                  "    pm.expect(json.page).to.be.a(\"number\");",
+                  "    pm.expect(json.size).to.be.a(\"number\");",
+                  "    pm.expect(json.totalElements).to.be.a(\"number\");",
+                  "    pm.expect(json.totalPages).to.be.a(\"number\");",
                   "});"
                 ]
               }
@@ -2419,6 +2492,15 @@
                   "});",
                   "pm.test(\"Response time is below 1500 ms\", function () {",
                   "    pm.expect(pm.response.responseTime).to.be.below(1500);",
+                  "});",
+                  "pm.test(\"Body is a page envelope\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data).to.be.an(\"array\");",
+                  "    pm.expect(json.data.length).to.be.above(0);",
+                  "    pm.expect(json.page).to.be.a(\"number\");",
+                  "    pm.expect(json.size).to.be.a(\"number\");",
+                  "    pm.expect(json.totalElements).to.be.a(\"number\");",
+                  "    pm.expect(json.totalPages).to.be.a(\"number\");",
                   "});"
                 ]
               }
@@ -2808,10 +2890,14 @@
                   "pm.test(\"Response time is below 1500 ms\", function () {",
                   "    pm.expect(pm.response.responseTime).to.be.below(1500);",
                   "});",
-                  "pm.test(\"Body is a non-empty array\", function () {",
+                  "pm.test(\"Body is a page envelope\", function () {",
                   "    var json = pm.response.json();",
-                  "    pm.expect(json).to.be.an(\"array\");",
-                  "    pm.expect(json.length).to.be.above(0);",
+                  "    pm.expect(json.data).to.be.an(\"array\");",
+                  "    pm.expect(json.data.length).to.be.above(0);",
+                  "    pm.expect(json.page).to.be.a(\"number\");",
+                  "    pm.expect(json.size).to.be.a(\"number\");",
+                  "    pm.expect(json.totalElements).to.be.a(\"number\");",
+                  "    pm.expect(json.totalPages).to.be.a(\"number\");",
                   "});"
                 ]
               }
@@ -3193,10 +3279,14 @@
                   "pm.test(\"Response time is below 1500 ms\", function () {",
                   "    pm.expect(pm.response.responseTime).to.be.below(1500);",
                   "});",
-                  "pm.test(\"Body is a non-empty array\", function () {",
+                  "pm.test(\"Body is a page envelope\", function () {",
                   "    var json = pm.response.json();",
-                  "    pm.expect(json).to.be.an(\"array\");",
-                  "    pm.expect(json.length).to.be.above(0);",
+                  "    pm.expect(json.data).to.be.an(\"array\");",
+                  "    pm.expect(json.data.length).to.be.above(0);",
+                  "    pm.expect(json.page).to.be.a(\"number\");",
+                  "    pm.expect(json.size).to.be.a(\"number\");",
+                  "    pm.expect(json.totalElements).to.be.a(\"number\");",
+                  "    pm.expect(json.totalPages).to.be.a(\"number\");",
                   "});"
                 ]
               }
@@ -3682,10 +3772,14 @@
                   "pm.test(\"Response time is below 1500 ms\", function () {",
                   "    pm.expect(pm.response.responseTime).to.be.below(1500);",
                   "});",
-                  "pm.test(\"Body is a non-empty array\", function () {",
+                  "pm.test(\"Body is a page envelope\", function () {",
                   "    var json = pm.response.json();",
-                  "    pm.expect(json).to.be.an(\"array\");",
-                  "    pm.expect(json.length).to.be.above(0);",
+                  "    pm.expect(json.data).to.be.an(\"array\");",
+                  "    pm.expect(json.data.length).to.be.above(0);",
+                  "    pm.expect(json.page).to.be.a(\"number\");",
+                  "    pm.expect(json.size).to.be.a(\"number\");",
+                  "    pm.expect(json.totalElements).to.be.a(\"number\");",
+                  "    pm.expect(json.totalPages).to.be.a(\"number\");",
                   "});"
                 ]
               }
@@ -4011,10 +4105,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4052,10 +4158,22 @@
               "path": [
                 "jobs"
               ]
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4067,10 +4185,14 @@
                   "pm.test(\"Response time is below 1500 ms\", function () {",
                   "    pm.expect(pm.response.responseTime).to.be.below(1500);",
                   "});",
-                  "pm.test(\"Body is a non-empty array\", function () {",
+                  "pm.test(\"Body is a page envelope\", function () {",
                   "    var json = pm.response.json();",
-                  "    pm.expect(json).to.be.an(\"array\");",
-                  "    pm.expect(json.length).to.be.above(0);",
+                  "    pm.expect(json.data).to.be.an(\"array\");",
+                  "    pm.expect(json.data.length).to.be.above(0);",
+                  "    pm.expect(json.page).to.be.a(\"number\");",
+                  "    pm.expect(json.size).to.be.a(\"number\");",
+                  "    pm.expect(json.totalElements).to.be.a(\"number\");",
+                  "    pm.expect(json.totalPages).to.be.a(\"number\");",
                   "});"
                 ]
               }
@@ -4091,10 +4213,22 @@
                 "jobs",
                 "{{jobId}}"
               ]
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4145,10 +4279,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4182,10 +4328,22 @@
                 "jobs",
                 "999999999"
               ]
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4235,10 +4393,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4287,10 +4457,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4339,10 +4521,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4391,10 +4585,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4443,10 +4649,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4495,10 +4713,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4547,10 +4777,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4599,10 +4841,22 @@
                   "language": "json"
                 }
               }
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({key: \"Authorization\", value: \"Bearer \" + pm.collectionVariables.get(\"adminToken\")});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -4801,6 +5055,1343 @@
         }
       ],
       "description": "These requests never reach the real Overpass API. Positive tests for this endpoint need a location with coordinates (created by the seeding step) and a quiet Overpass server, so they are not part of the default run."
+    },
+    {
+      "name": "11 Pagination, filtering and sorting",
+      "item": [
+        {
+          "name": "Create paging family PgTest-B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/families",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"familyName\": \"PgTest-B\"}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.collectionVariables.set(\"pgFamily1\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create paging family PgTest-A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/families",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"familyName\": \"PgTest-A\"}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.collectionVariables.set(\"pgFamily2\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create paging family PgTest-C",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/families",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"familyName\": \"PgTest-C\"}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.collectionVariables.set(\"pgFamily3\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Defaults when no parameters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"Default page 0, size 20\", function () {",
+                  "    pm.expect(json.page).to.eql(0);",
+                  "    pm.expect(json.size).to.eql(20);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Page 0 of size 2 (filtered)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?familyName=PgTest&size=2&page=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "familyName",
+                  "value": "PgTest"
+                },
+                {
+                  "key": "size",
+                  "value": "2"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"2 of 3 rows, 2 pages\", function () {",
+                  "    pm.expect(json.data.length).to.eql(2);",
+                  "    pm.expect(json.totalElements).to.eql(3);",
+                  "    pm.expect(json.totalPages).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Page 1 of size 2 (filtered)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?familyName=PgTest&size=2&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "familyName",
+                  "value": "PgTest"
+                },
+                {
+                  "key": "size",
+                  "value": "2"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"last page has 1 row\", function () {",
+                  "    pm.expect(json.data.length).to.eql(1);",
+                  "    pm.expect(json.page).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Page past the end is empty",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?familyName=PgTest&size=2&page=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "familyName",
+                  "value": "PgTest"
+                },
+                {
+                  "key": "size",
+                  "value": "2"
+                },
+                {
+                  "key": "page",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"empty data but totals kept\", function () {",
+                  "    pm.expect(json.data.length).to.eql(0);",
+                  "    pm.expect(json.totalElements).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sort familyName desc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?familyName=PgTest&sort=familyName,desc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "familyName",
+                  "value": "PgTest"
+                },
+                {
+                  "key": "sort",
+                  "value": "familyName,desc"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"descending\", function () {",
+                  "    pm.expect(json.data.map(function (f) { return f.familyName; })).to.eql([\"PgTest-C\",\"PgTest-B\",\"PgTest-A\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sort familyName asc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?familyName=PgTest&sort=familyName,asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "familyName",
+                  "value": "PgTest"
+                },
+                {
+                  "key": "sort",
+                  "value": "familyName,asc"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"ascending\", function () {",
+                  "    pm.expect(json.data.map(function (f) { return f.familyName; })).to.eql([\"PgTest-A\",\"PgTest-B\",\"PgTest-C\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter is case-insensitive and partial",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?familyName=pgtest-a",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "familyName",
+                  "value": "pgtest-a"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"one match\", function () {",
+                  "    pm.expect(json.totalElements).to.eql(1);",
+                  "    pm.expect(json.data[0].familyName).to.eql(\"PgTest-A\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter with no match",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?familyName=NoSuchFamilyXyz",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "familyName",
+                  "value": "NoSuchFamilyXyz"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"empty result\", function () {",
+                  "    pm.expect(json.data).to.eql([]);",
+                  "    pm.expect(json.totalElements).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "LIKE wildcard % is treated as text",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?familyName=%25",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "familyName",
+                  "value": "%25"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"does not match everything\", function () {",
+                  "    pm.expect(json.totalElements).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SQL injection in filter value is just text",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?familyName=%27%20OR%201%3D1%20--",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "familyName",
+                  "value": "%27%20OR%201%3D1%20--"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"no rows, no error\", function () {",
+                  "    pm.expect(json.totalElements).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Citizens: filter on lastName + sort",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/citizens?lastName=Postmansen&sort=firstName,asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "citizens"
+              ],
+              "query": [
+                {
+                  "key": "lastName",
+                  "value": "Postmansen"
+                },
+                {
+                  "key": "sort",
+                  "value": "firstName,asc"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"postman citizens found\", function () {",
+                  "    pm.expect(json.totalElements).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Citizens: birth date range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/citizens?birthDateFrom=1990-01-01&birthDateTo=1990-12-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "citizens"
+              ],
+              "query": [
+                {
+                  "key": "birthDateFrom",
+                  "value": "1990-01-01"
+                },
+                {
+                  "key": "birthDateTo",
+                  "value": "1990-12-31"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"range returns an envelope\", function () {",
+                  "    pm.expect(json.data).to.be.an(\"array\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Housings: capacity range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/housings?capacityFrom=1&capacityTo=2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "housings"
+              ],
+              "query": [
+                {
+                  "key": "capacityFrom",
+                  "value": "1"
+                },
+                {
+                  "key": "capacityTo",
+                  "value": "2"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.test(\"all within range\", function () {",
+                  "    json.data.forEach(function (h) { pm.expect(h.capacity).to.be.within(1,2); });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "page=-1 is rejected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?page=-1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "-1"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error does not leak internals\", function () {",
+                  "    var text = pm.response.text();",
+                  "    pm.expect(text).to.not.include(\"Exception\");",
+                  "    pm.expect(text).to.not.include(\"org.hibernate\");",
+                  "    pm.expect(text).to.not.include(\"SELECT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "page=abc is rejected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?page=abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "abc"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error does not leak internals\", function () {",
+                  "    var text = pm.response.text();",
+                  "    pm.expect(text).to.not.include(\"Exception\");",
+                  "    pm.expect(text).to.not.include(\"org.hibernate\");",
+                  "    pm.expect(text).to.not.include(\"SELECT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "size=0 is rejected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?size=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error does not leak internals\", function () {",
+                  "    var text = pm.response.text();",
+                  "    pm.expect(text).to.not.include(\"Exception\");",
+                  "    pm.expect(text).to.not.include(\"org.hibernate\");",
+                  "    pm.expect(text).to.not.include(\"SELECT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "size=101 is rejected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?size=101",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "101"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error does not leak internals\", function () {",
+                  "    var text = pm.response.text();",
+                  "    pm.expect(text).to.not.include(\"Exception\");",
+                  "    pm.expect(text).to.not.include(\"org.hibernate\");",
+                  "    pm.expect(text).to.not.include(\"SELECT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Huge page * size is rejected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?page=2147483647&size=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2147483647"
+                },
+                {
+                  "key": "size",
+                  "value": "100"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error does not leak internals\", function () {",
+                  "    var text = pm.response.text();",
+                  "    pm.expect(text).to.not.include(\"Exception\");",
+                  "    pm.expect(text).to.not.include(\"org.hibernate\");",
+                  "    pm.expect(text).to.not.include(\"SELECT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sort without direction is rejected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?sort=familyName",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "familyName"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error does not leak internals\", function () {",
+                  "    var text = pm.response.text();",
+                  "    pm.expect(text).to.not.include(\"Exception\");",
+                  "    pm.expect(text).to.not.include(\"org.hibernate\");",
+                  "    pm.expect(text).to.not.include(\"SELECT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sort with bad direction is rejected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?sort=familyName,sideways",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "familyName,sideways"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error does not leak internals\", function () {",
+                  "    var text = pm.response.text();",
+                  "    pm.expect(text).to.not.include(\"Exception\");",
+                  "    pm.expect(text).to.not.include(\"org.hibernate\");",
+                  "    pm.expect(text).to.not.include(\"SELECT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sort on a non-whitelisted field",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?sort=password,asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "password,asc"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error does not leak internals\", function () {",
+                  "    var text = pm.response.text();",
+                  "    pm.expect(text).to.not.include(\"Exception\");",
+                  "    pm.expect(text).to.not.include(\"org.hibernate\");",
+                  "    pm.expect(text).to.not.include(\"SELECT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sort field with SQL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?sort=id%3BDROP%20TABLE%20family,asc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "sort",
+                  "value": "id%3BDROP%20TABLE%20family,asc"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error does not leak internals\", function () {",
+                  "    var text = pm.response.text();",
+                  "    pm.expect(text).to.not.include(\"Exception\");",
+                  "    pm.expect(text).to.not.include(\"org.hibernate\");",
+                  "    pm.expect(text).to.not.include(\"SELECT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown filter is rejected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?foo=bar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "foo",
+                  "value": "bar"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error does not leak internals\", function () {",
+                  "    var text = pm.response.text();",
+                  "    pm.expect(text).to.not.include(\"Exception\");",
+                  "    pm.expect(text).to.not.include(\"org.hibernate\");",
+                  "    pm.expect(text).to.not.include(\"SELECT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Repeated filter is rejected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?familyName=a&familyName=b",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "familyName",
+                  "value": "a"
+                },
+                {
+                  "key": "familyName",
+                  "value": "b"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error does not leak internals\", function () {",
+                  "    var text = pm.response.text();",
+                  "    pm.expect(text).to.not.include(\"Exception\");",
+                  "    pm.expect(text).to.not.include(\"org.hibernate\");",
+                  "    pm.expect(text).to.not.include(\"SELECT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid date filter is rejected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/citizens?birthDateFrom=notadate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "citizens"
+              ],
+              "query": [
+                {
+                  "key": "birthDateFrom",
+                  "value": "notadate"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error does not leak internals\", function () {",
+                  "    var text = pm.response.text();",
+                  "    pm.expect(text).to.not.include(\"Exception\");",
+                  "    pm.expect(text).to.not.include(\"org.hibernate\");",
+                  "    pm.expect(text).to.not.include(\"SELECT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Range filter on text field is rejected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families?familyNameFrom=a",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families"
+              ],
+              "query": [
+                {
+                  "key": "familyNameFrom",
+                  "value": "a"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error does not leak internals\", function () {",
+                  "    var text = pm.response.text();",
+                  "    pm.expect(text).to.not.include(\"Exception\");",
+                  "    pm.expect(text).to.not.include(\"org.hibernate\");",
+                  "    pm.expect(text).to.not.include(\"SELECT\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete paging family 1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families/{{pgFamily1}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families",
+                "{{pgFamily1}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete paging family 2",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families/{{pgFamily2}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families",
+                "{{pgFamily2}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete paging family 3",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/families/{{pgFamily3}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "families",
+                "{{pgFamily3}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "99 Cleanup",
@@ -5311,6 +6902,10 @@
       "value": ""
     },
     {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
       "key": "username",
       "value": ""
     },
@@ -5352,6 +6947,18 @@
     },
     {
       "key": "jobId",
+      "value": ""
+    },
+    {
+      "key": "pgFamily1",
+      "value": ""
+    },
+    {
+      "key": "pgFamily2",
+      "value": ""
+    },
+    {
+      "key": "pgFamily3",
       "value": ""
     }
   ]

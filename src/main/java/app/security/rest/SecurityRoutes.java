@@ -15,11 +15,15 @@ import static io.javalin.apibuilder.ApiBuilder.*;
 
 public class SecurityRoutes
 {
-    private static SecurityController securityController = new SecurityController();
     private static ObjectMapper objectMapper = new ObjectMapper();
     private static Logger logger = LoggerFactory.getLogger(SecurityRoutes.class);
 
     public static EndpointGroup getRoutes(EntityManagerFactory emf)
+    {
+        return getRoutes(emf, new SecurityController());
+    }
+
+    public static EndpointGroup getRoutes(EntityManagerFactory emf, SecurityController securityController)
     {
         app.security.daos.UserDAO.getInstance(emf);
         return () ->
@@ -28,6 +32,7 @@ public class SecurityRoutes
             {
                 post("register", securityController.register(), Role.ANYONE);
                 post("login", securityController.login(), Role.ANYONE);
+                post("logout", securityController.logout(), Role.USER, Role.ADMIN);
             });
             path("secured", () ->
             {

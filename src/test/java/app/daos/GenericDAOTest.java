@@ -1,10 +1,26 @@
 package app.daos;
 
 import app.config.HibernateConfig;
+import app.dtos.PageRequest;
 import app.entities.Citizen;
+import app.entities.CitizenRelationship;
+import app.entities.Company;
+import app.entities.EducationRecord;
 import app.entities.Family;
+import app.entities.Housing;
+import app.entities.Institution;
+import app.entities.Job;
 import app.entities.Location;
 import app.exceptions.NotFoundException;
+import app.services.CitizenRelationshipService;
+import app.services.CitizenService;
+import app.services.CompanyService;
+import app.services.EducationRecordService;
+import app.services.FamilyService;
+import app.services.HousingService;
+import app.services.InstitutionService;
+import app.services.JobService;
+import app.services.LocationService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.PersistenceException;
@@ -13,6 +29,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
+import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -28,6 +46,7 @@ class GenericDAOTest
     private GenericDAO<Location> locationDAO;
     private GenericDAO<Family> familyDAO;
     private GenericDAO<Citizen> citizenDAO;
+    private GenericDAO<Housing> housingDAO;
 
     @BeforeEach
     void setUp()
@@ -36,6 +55,7 @@ class GenericDAOTest
         locationDAO = new GenericDAO<>(emf, Location.class);
         familyDAO = new GenericDAO<>(emf, Family.class);
         citizenDAO = new GenericDAO<>(emf, Citizen.class);
+        housingDAO = new GenericDAO<>(emf, Housing.class);
         try (EntityManager em = emf.createEntityManager())
         {
             em.getTransaction().begin();
@@ -267,5 +287,193 @@ class GenericDAOTest
     {
         // Arrange / Act / Assert
         assertThrows(IllegalArgumentException.class, () -> locationDAO.delete(null));
+    }
+
+    @Test
+    @DisplayName("pages filtered citizens and reports the total matching count")
+    void findPageAndCountFiltered()
+    {
+        Family family = new Family();
+        family.setFamilyName("Page test");
+        family = familyDAO.persist(family);
+        citizenDAO.persist(citizen("Alex", "Smith", LocalDate.of(1990, 1, 1), family));
+        citizenDAO.persist(citizen("Jamie", "Smithson", LocalDate.of(1995, 6, 1), family));
+        citizenDAO.persist(citizen("Taylor", "Jones", LocalDate.of(1995, 6, 1), family));
+
+        Map<String, String> allowedFilters = Map.of(
+                "lastName", "lastName",
+                "birthDateFrom", "birthDate",
+                "birthDateTo", "birthDate"
+        );
+        Map<String, String> filters = Map.of(
+                "lastName", "SMITH",
+                "birthDateFrom", "1990-01-01",
+                "birthDateTo", "1999-12-31"
+        );
+
+        List<Citizen> firstPage = citizenDAO.findPage(
+                0, 1, "id", "asc", filters, allowedFilters, Map.of("id", "id"));
+        List<Citizen> secondPage = citizenDAO.findPage(
+                1, 1, "id", "asc", filters, allowedFilters, Map.of("id", "id"));
+        List<Citizen> beyondLastPage = citizenDAO.findPage(
+                3, 1, "id", "asc", filters, allowedFilters, Map.of("id", "id"));
+
+        assertEquals(2L, citizenDAO.countFiltered(filters, allowedFilters));
+        assertEquals(1, firstPage.size());
+        assertEquals("Alex", firstPage.get(0).getFirstName());
+        assertEquals("Jamie", secondPage.get(0).getFirstName());
+        assertEquals(0, beyondLastPage.size());
+    }
+
+    @Test
+    @DisplayName("sorts by an allowlisted relationship id and uses the entity id as a tie-breaker")
+    void findPageSortsByRelationshipId()
+    {
+        Family earlierFamily = new Family();
+        earlierFamily.setFamilyName("A");
+        earlierFamily = familyDAO.persist(earlierFamily);
+        Family laterFamily = new Family();
+        laterFamily.setFamilyName("B");
+        laterFamily = familyDAO.persist(laterFamily);
+
+        Citizen firstInserted = citizenDAO.persist(
+                citizen("Later family", "Smith", LocalDate.of(1990, 1, 1), laterFamily));
+        Citizen secondInserted = citizenDAO.persist(
+                citizen("Earlier family 1", "Smith", LocalDate.of(1990, 1, 1), earlierFamily));
+        Citizen thirdInserted = citizenDAO.persist(
+                citizen("Earlier family 2", "Smith", LocalDate.of(1990, 1, 1), earlierFamily));
+
+        List<Citizen> rows = citizenDAO.findPage(
+                0, 3, "familyId", "asc", Map.of(), Map.of(),
+                Map.of("familyId", "family.id"));
+
+        assertEquals(List.of(secondInserted.getId(), thirdInserted.getId(), firstInserted.getId()),
+                rows.stream().map(Citizen::getId).toList());
+
+        List<Citizen> descendingRows = citizenDAO.findPage(
+                0, 3, "familyId", "desc", Map.of(), Map.of(),
+                Map.of("familyId", "family.id"));
+        assertEquals(List.of(firstInserted.getId(), secondInserted.getId(), thirdInserted.getId()),
+                descendingRows.stream().map(Citizen::getId).toList());
+    }
+
+    @Test
+    @DisplayName("rejects unsupported sort and filter fields, including blank filters")
+    void rejectsUnsupportedPageFields()
+    {
+        assertThrows(IllegalArgumentException.class, () ->
+                citizenDAO.findPage(0, 10, "unknown", "asc", Map.of(), Map.of(),
+                        Map.of("id", "id")));
+        assertThrows(IllegalArgumentException.class, () ->
+                citizenDAO.countFiltered(Map.of("unknown", ""), Map.of()));
+        assertThrows(IllegalArgumentException.class, () ->
+                citizenDAO.findPage(0, 10, "id", "asc", Map.of(), Map.of(),
+                        Map.of("id", "family.unknown")));
+    }
+
+    @Test
+    @DisplayName("rejects malformed dates and range filters on string attributes")
+    void rejectsInvalidFilterValues()
+    {
+        Family family = new Family();
+        family.setFamilyName("Invalid values");
+        familyDAO.persist(family);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                citizenDAO.countFiltered(
+                        Map.of("birthDateFrom", "not-a-date"),
+                        Map.of("birthDateFrom", "birthDate")));
+        assertThrows(IllegalArgumentException.class, () ->
+                citizenDAO.countFiltered(
+                        Map.of("lastNameFrom", "A"),
+                        Map.of("lastNameFrom", "lastName")));
+    }
+
+    @Test
+    @DisplayName("all CRUD services map their allowlisted sort fields to valid entity paths")
+    void allServiceSortFieldsResolveAgainstTheMetamodel()
+    {
+        GenericDAO<Company> companyDAO = new GenericDAO<>(emf, Company.class);
+        GenericDAO<Institution> institutionDAO = new GenericDAO<>(emf, Institution.class);
+        GenericDAO<Job> jobDAO = new GenericDAO<>(emf, Job.class);
+        GenericDAO<EducationRecord> educationDAO = new GenericDAO<>(emf, EducationRecord.class);
+        GenericDAO<CitizenRelationship> relationshipDAO = new GenericDAO<>(emf, CitizenRelationship.class);
+
+        assertSortable(new FamilyService(familyDAO), "id", "familyName");
+        assertSortable(new LocationService(locationDAO), "id", "name", "streetAddress");
+        assertSortable(new HousingService(housingDAO, locationDAO),
+                "id", "locationId", "housingType", "capacity");
+        assertSortable(new CitizenService(citizenDAO, familyDAO, housingDAO),
+                "id", "firstName", "lastName", "birthDate", "deathDate", "status",
+                "gender", "familyId", "housingId");
+        assertSortable(new CitizenRelationshipService(relationshipDAO, citizenDAO),
+                "id", "citizenId1", "citizenId2", "relationshipType", "startDate", "endDate");
+        assertSortable(new InstitutionService(institutionDAO, locationDAO),
+                "id", "locationId", "name", "type");
+        assertSortable(new CompanyService(companyDAO, locationDAO),
+                "id", "locationId", "name", "foundedDate", "dissolvedDate", "status");
+        assertSortable(new EducationRecordService(educationDAO, citizenDAO, institutionDAO),
+                "id", "citizenId", "institutionId", "startDate", "endDate");
+        assertSortable(new JobService(jobDAO, citizenDAO, companyDAO, institutionDAO),
+                "id", "citizenId", "companyId", "institutionId", "title", "salary",
+                "startDate", "endDate", "status");
+    }
+
+    @Test
+    @DisplayName("combines numeric range filters with relationship ID filters")
+    void filtersNumericRangesAndRelationshipIds()
+    {
+        Location location = locationDAO.persist(location("Range test"));
+        housingDAO.persist(housing(location, 2));
+        housingDAO.persist(housing(location, 4));
+        housingDAO.persist(housing(location, 6));
+
+        Map<String, String> allowedFilters = Map.of(
+                "capacityFrom", "capacity",
+                "capacityTo", "capacity",
+                "locationId", "location.id"
+        );
+        Map<String, String> filters = Map.of(
+                "capacityFrom", "3",
+                "capacityTo", "5",
+                "locationId", location.getId().toString()
+        );
+
+        List<Housing> rows = housingDAO.findPage(
+                0, 10, "capacity", "desc", filters, allowedFilters,
+                Map.of("capacity", "capacity"));
+
+        assertEquals(1L, housingDAO.countFiltered(filters, allowedFilters));
+        assertEquals(List.of(4), rows.stream().map(Housing::getCapacity).toList());
+        assertThrows(IllegalArgumentException.class, () ->
+                housingDAO.countFiltered(
+                        Map.of("capacityFrom", "not-a-number"),
+                        Map.of("capacityFrom", "capacity")));
+    }
+
+    private Citizen citizen(String firstName, String lastName, LocalDate birthDate, Family family)
+    {
+        Citizen citizen = new Citizen();
+        citizen.setFirstName(firstName);
+        citizen.setLastName(lastName);
+        citizen.setBirthDate(birthDate);
+        citizen.setFamily(family);
+        return citizen;
+    }
+
+    private Housing housing(Location location, int capacity)
+    {
+        Housing housing = new Housing();
+        housing.setLocation(location);
+        housing.setHousingType("house");
+        housing.setCapacity(capacity);
+        return housing;
+    }
+
+    private void assertSortable(app.services.CrudService<?, ?> service, String... fields)
+    {
+        for (String field : fields) {
+            service.getAll(new PageRequest(0, 10, field, "asc", Map.of()));
+        }
     }
 }
