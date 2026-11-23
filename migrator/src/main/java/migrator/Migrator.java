@@ -37,7 +37,6 @@ public final class Migrator
         catch (Exception e)
         {
             System.err.println("Migration failed: " + e.getMessage());
-            e.printStackTrace();
             System.exit(2);
         }
     }
