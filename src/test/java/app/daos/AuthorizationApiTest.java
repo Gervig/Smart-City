@@ -31,6 +31,7 @@ import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.empty;
 
 /**
  * Covers requirement(s): FR-03 (logout), FR-04 (no valid token gives 401), FR-05 (administrator actions: the
@@ -146,8 +147,9 @@ class AuthorizationApiTest
 
         withToken(user).when().get("/jobs/" + employment.jobId)
                 .then().statusCode(200).body("title", equalTo("Developer")).body("salary", nullValue());
-        withToken(user).when().get("/jobs").then().statusCode(200).body("salary", everyItem(nullValue()));
-        assertEquals(0, new BigDecimal("35000").compareTo(salaryAsAdmin(employment.jobId)));
+        withToken(user).when().get("/jobs").then().statusCode(200)
+                .body("data", not(empty()))
+                .body("data.salary", everyItem(nullValue()));        assertEquals(0, new BigDecimal("35000").compareTo(salaryAsAdmin(employment.jobId)));
 
         employment.delete();
     }

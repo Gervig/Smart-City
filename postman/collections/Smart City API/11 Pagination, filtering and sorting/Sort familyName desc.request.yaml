@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/families?familyName=PgTest&sort=familyName,desc"
+method: GET
+queryParams:
+  familyName: PgTest
+  sort: familyName,desc
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      var json = pm.response.json();
+      pm.test("descending", function () {
+          pm.expect(json.data.map(function (f) { return f.familyName; })).to.eql(["PgTest-C","PgTest-B","PgTest-A"]);
+      });
+    language: text/javascript
+order: 8000

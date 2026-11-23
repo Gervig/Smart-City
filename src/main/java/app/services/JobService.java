@@ -10,6 +10,8 @@ import app.entities.Job;
 import app.mappers.JobMapper;
 import app.validators.JobValidator;
 
+import java.util.Map;
+
 public class JobService extends AbstractCrudService<Job, JobDTO, JobRequestDTO> {
     private final GenericDAO<Citizen> citizenDAO;
     private final GenericDAO<Company> companyDAO;
@@ -20,6 +22,38 @@ public class JobService extends AbstractCrudService<Job, JobDTO, JobRequestDTO> 
         this.citizenDAO = citizenDAO;
         this.companyDAO = companyDAO;
         this.institutionDAO = institutionDAO;
+    }
+
+    @Override
+    protected Map<String, String> allowedSortFields() {
+        return Map.of(
+                "id", "id",
+                "citizenId", "citizen.id",
+                "companyId", "company.id",
+                "institutionId", "institution.id",
+                "title", "title",
+                "salary", "salary",
+                "startDate", "startDate",
+                "endDate", "endDate",
+                "status", "status"
+        );
+    }
+
+    @Override
+    protected Map<String, String> allowedFilters() {
+        return Map.ofEntries(
+                Map.entry("citizenId", "citizen.id"),
+                Map.entry("companyId", "company.id"),
+                Map.entry("institutionId", "institution.id"),
+                Map.entry("title", "title"),
+                Map.entry("status", "status"),
+                Map.entry("salaryFrom", "salary"),
+                Map.entry("salaryTo", "salary"),
+                Map.entry("startDateFrom", "startDate"),
+                Map.entry("startDateTo", "startDate"),
+                Map.entry("endDateFrom", "endDate"),
+                Map.entry("endDateTo", "endDate")
+        );
     }
 
     @Override

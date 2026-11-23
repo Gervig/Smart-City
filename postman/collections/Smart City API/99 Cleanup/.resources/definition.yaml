@@ -1,3 +1,3 @@
 $kind: collection
 description: Deletes in reverse dependency order. The two 409 requests show that rows still referenced by other rows cannot be deleted.
-order: 12000
+order: 13000

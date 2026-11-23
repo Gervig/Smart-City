@@ -5,6 +5,10 @@ variables:
     value: ""
     disabled: false
     secret: false
+  - key: adminToken
+    value: ""
+    disabled: false
+    secret: false
   - key: username
     value: ""
     disabled: false
@@ -49,11 +53,23 @@ variables:
     value: ""
     disabled: false
     secret: false
+  - key: pgFamily1
+    value: ""
+    disabled: false
+    secret: false
+  - key: pgFamily2
+    value: ""
+    disabled: false
+    secret: false
+  - key: pgFamily3
+    value: ""
+    disabled: false
+    secret: false
   - key: bearer_token_0fcb
     secret: true
     disabled: false
 auth:
-  - id: c50e4a16-9123-4f3a-9525-e1122672370c
+  - id: ba40f5c3-3fb2-4e88-8bc0-1b9001fb7814
     type: bearer
     name: bearer auth
     credentials:

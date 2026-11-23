@@ -17,4 +17,4 @@ scripts:
           pm.expect(pm.response.json().msg).to.eql("Success");
       });
     language: text/javascript
-order: 7000
+order: 8000

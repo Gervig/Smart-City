@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/families?familyName=PgTest&size=2&page=0"
+method: GET
+queryParams:
+  familyName: PgTest
+  size: "2"
+  page: "0"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      var json = pm.response.json();
+      pm.test("2 of 3 rows, 2 pages", function () {
+          pm.expect(json.data.length).to.eql(2);
+          pm.expect(json.totalElements).to.eql(3);
+          pm.expect(json.totalPages).to.eql(2);
+      });
+    language: text/javascript
+order: 5000
