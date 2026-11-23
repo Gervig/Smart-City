@@ -31,7 +31,8 @@ public class GenericDAO<T>
 {
 
     private static final Pattern SAFE_ATTRIBUTE_PATH =
-            Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*");
+            Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(?>\\.[A-Za-z_][A-Za-z0-9_]*)*");
+
 
     // [CHANGED] Expanded allow-list with paths used by tests and services
     private static final Map<Class<?>, Set<String>> ALLOWED_COUNT_PATHS = Map.of(
