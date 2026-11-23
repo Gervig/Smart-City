@@ -1,5 +1,8 @@
 package app.daos;
 
+import app.entities.Citizen;
+import app.entities.Family;
+import app.entities.Institution;
 import app.exceptions.NotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -16,19 +19,34 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.Locale;
 import java.util.Map;
 
 
 public class GenericDAO<T>
 {
+
+    private static final Pattern SAFE_ATTRIBUTE_PATH =
+            Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(?>\\.[A-Za-z_][A-Za-z0-9_]*)*");
+
+
+    private static final Map<Class<?>, Set<String>> ALLOWED_COUNT_PATHS = Map.of(
+            Citizen.class, Set.of("housing.id", "firstName"),
+            Family.class, Set.of("familyName"),
+            Institution.class, Set.of("phone")
+    );
+
     private final EntityManagerFactory emf;
     private final Class<T> type;
 
     public GenericDAO(EntityManagerFactory emf, Class<T> type)
     {
-        this.emf = emf;
-        this.type = type;
+        this.emf = Objects.requireNonNull(emf, "EntityManagerFactory is required");
+        this.type = Objects.requireNonNull(type, "Entity type is required");
     }
 
     public T persist(T entity)
@@ -400,6 +418,7 @@ public class GenericDAO<T>
 
     public long countWhere(String attributePath, Object value)
     {
+        String validatedPath = validateAttributePath(attributePath);
         try (EntityManager em = emf.createEntityManager())
         {
             CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -409,6 +428,24 @@ public class GenericDAO<T>
                     .where(cb.equal(resolveBasicPath(root, em, attributePath), value));
             return em.createQuery(query).getSingleResult();
         }
+    }
+
+    private String validateAttributePath(String attributePath)
+    {
+        if (attributePath == null || attributePath.isBlank())
+        {
+            throw new IllegalArgumentException("attributePath is required");
+        }
+        if (!SAFE_ATTRIBUTE_PATH.matcher(attributePath).matches())
+        {
+            throw new IllegalArgumentException("Invalid attribute path: " + attributePath);
+        }
+        Set<String> allowedForType = ALLOWED_COUNT_PATHS.getOrDefault(type, Set.of());
+        if (!allowedForType.contains(attributePath))
+        {
+            throw new IllegalArgumentException("Attribute path not allowed for " + type.getSimpleName() + ": " + attributePath);
+        }
+        return attributePath;
     }
 
     public void delete(Long id)

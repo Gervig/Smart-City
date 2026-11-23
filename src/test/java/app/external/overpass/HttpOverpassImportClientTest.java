@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -59,6 +60,23 @@ class HttpOverpassImportClientTest
         server.resetAll();
         pauses = new ArrayList<>();
         client = new HttpOverpassClient(server.baseUrl() + "/api/interpreter", Duration.ofSeconds(2), pauses::add);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "NaN, 12.55, 55.70, 12.62",
+            "55.66, NaN, 55.70, 12.62",
+            "55.66, 12.55, Infinity, 12.62",
+            "55.66, 12.55, 55.70, -Infinity",
+            "55.80, 12.55, 55.70, 12.62"
+    })
+    @DisplayName("rejects invalid bounding box coordinates before making a request")
+    void findInAreaInvalidBounds(double south, double west, double north, double east)
+    {
+        // Arrange / Act / Assert
+        assertThrows(IllegalArgumentException.class,
+                () -> client.findInArea(south, west, north, east, "hospital", 20));
+        server.verify(0, postRequestedFor(urlEqualTo("/api/interpreter")));
     }
 
     @Test
@@ -404,7 +422,9 @@ class HttpOverpassImportClientTest
                           {"id":2,"type":"node","lat":55.7,"lon":12.6},
                           {"id":3,"lat":55.8,"lon":12.7,"tags":{"name":"Missing type"}},
                           {"id":4,"type":"way","lon":12.8,"tags":{"name":"Missing latitude"}},
-                          {"id":5,"type":"way","lat":55.9,"tags":{"name":"Missing longitude"}}
+                          {"id":5,"type":"way","lat":55.9,"tags":{"name":"Missing longitude"}},
+                          {"id":6,"type":"node","lat":55.9,"tags":{"name":"Missing lon only"}},
+                          {"id":7,"type":"node","lat":55.9,"lon":"bad","tags":{"name":"Non-numeric lon"}}
                         ]}
                         """)));
 
@@ -419,6 +439,23 @@ class HttpOverpassImportClientTest
         assertEquals("node", elements.get(1).osmType());
         assertNull(elements.get(1).name());
         assertEquals(Map.of(), elements.get(1).tags());
+    }
+
+    @Test
+    @DisplayName("converts an import request timeout into OverpassException")
+    void findInAreaTimeout()
+    {
+        // Arrange
+        server.stubFor(post(urlEqualTo("/api/interpreter"))
+                .willReturn(aResponse().withFixedDelay(2000).withBody("{\"elements\":[]}")));
+        HttpOverpassClient shortTimeoutClient =
+                new HttpOverpassClient(server.baseUrl() + "/api/interpreter", Duration.ofMillis(500), pauses::add);
+
+        // Act / Assert
+        OverpassException exception = assertThrows(OverpassException.class,
+                () -> shortTimeoutClient.findInArea(55.66, 12.55, 55.70, 12.62, "hospital", 20));
+        assertEquals(0, exception.getStatusCode());
+        assertTrue(exception.isTimeout());
     }
 
     @Test
