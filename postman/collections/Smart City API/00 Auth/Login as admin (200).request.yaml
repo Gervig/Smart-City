@@ -1,0 +1,28 @@
+$kind: http-request
+description: Logs in as the admin created at startup (ADMIN_PASSWORD in config.properties; set the environment's adminPassword to the same value). The jobs folder uses this token, because only an admin can create jobs and see or set salaries.
+url: "{{baseUrl}}/api/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "username": "admin",
+      "password": "{{adminPassword}}"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Returns a token", function () {
+          var json = pm.response.json();
+          pm.expect(json.token).to.be.a("string").and.not.empty;
+          pm.collectionVariables.set("adminToken", json.token);
+      });
+    language: text/javascript
+order: 3000

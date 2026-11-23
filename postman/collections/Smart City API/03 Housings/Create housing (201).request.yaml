@@ -1,0 +1,32 @@
+$kind: http-request
+url: "{{baseUrl}}/housings"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "locationId": {{locationId}},
+      "housingType": "house",
+      "capacity": 1
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () {
+          pm.response.to.have.status(201);
+      });
+      pm.test("Body is JSON", function () {
+          pm.response.to.be.json;
+      });
+      pm.test("Response time is below 1500 ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+      pm.test("Saves housingId", function () {
+          var json = pm.response.json();
+          pm.expect(json.id).to.be.a("number");
+          pm.collectionVariables.set("housingId", json.id);
+      });
+    language: text/javascript
+order: 1000

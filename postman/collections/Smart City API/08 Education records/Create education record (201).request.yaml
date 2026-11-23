@@ -1,0 +1,33 @@
+$kind: http-request
+url: "{{baseUrl}}/education-records"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "citizenId": {{citizenId}},
+      "institutionId": {{institutionId}},
+      "startDate": "2005-08-15",
+      "endDate": "2008-06-30"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () {
+          pm.response.to.have.status(201);
+      });
+      pm.test("Body is JSON", function () {
+          pm.response.to.be.json;
+      });
+      pm.test("Response time is below 1500 ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+      pm.test("Saves educationId", function () {
+          var json = pm.response.json();
+          pm.expect(json.id).to.be.a("number");
+          pm.collectionVariables.set("educationId", json.id);
+      });
+    language: text/javascript
+order: 1000

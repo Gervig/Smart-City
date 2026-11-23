@@ -1,0 +1,30 @@
+package app.entities;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.DynamicUpdate;
+
+@Entity
+@Table(name = "institution")
+@Getter
+@Setter
+@NoArgsConstructor
+@DynamicUpdate
+public class Institution {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(optional = false)
+    private Location location;
+
+    private String name;
+    private String type;
+
+    // OSM variables
+    private String website;
+    private String phone;
+    private String email;
+}

@@ -1,53 +1,56 @@
 package app;
 
 import app.config.HibernateConfig;
-import app.populators.RolePopulator;
-import app.populators.UserPopulator;
-import app.rest.ApplicationConfig;
-import app.rest.Routes;
-import app.security.daos.RoleDAO;
+import app.exceptions.ApiException;
+import app.exceptions.NotAuthorizedException;
+import app.exceptions.NotFoundException;
+import app.exceptions.ValidationException;
+import app.populators.StartupPopulator;
+import app.routes.Routes;
 import app.security.daos.UserDAO;
-import app.security.entities.Role;
-import app.security.entities.User;
+import app.security.rest.SecurityController;
 import app.security.rest.SecurityRoutes;
-import jakarta.persistence.EntityManager;
+import io.javalin.Javalin;
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.PersistenceException;
 
-import java.util.List;
+import java.util.Map;
 
-public class Main
-{
-    public static void main(String[] args)
-    {
+import static io.javalin.apibuilder.ApiBuilder.path;
+
+public class Main {
+    public static void main(String[] args) {
         EntityManagerFactory emf = HibernateConfig.getEntityManagerFactory();
+        UserDAO.getInstance(emf);
+        StartupPopulator.populate(emf, StartupPopulator.adminPassword());
 
-        setupDatabase(emf);
-
-        ApplicationConfig
-                .getInstance()
-                .initiateServer()
-                .securityCheck()
-                .setRoute(Routes.getRoutes(emf))
-                .setRoute(SecurityRoutes.getRoutes(emf))
-                .handleException()
-                .startServer(7070); //TODO change this to an available port for deployment
-
+        createApp(emf, new SecurityController()).start(7070);
     }
 
-    private static void setupDatabase(EntityManagerFactory emf)
-    {
-        try(EntityManager em = emf.createEntityManager())
-        {
-            // populates the database with roles
-            List<Role> roles = RolePopulator.populate();
-            RoleDAO roleDAO = RoleDAO.getInstance(emf);
-            roles.forEach(roleDAO::createRole);
+    /**
+     * Builds the application with all routes, filters and exception handlers, without starting it. The API tests
+     * start it on a free port with their own SecurityController.
+     */
+    public static Javalin createApp(EntityManagerFactory emf, SecurityController securityController) {
+        UserDAO.getInstance(emf);
 
-            // populates the database with users
-            List<User> users = UserPopulator.populate();
-            UserDAO userDAO = UserDAO.getInstance(emf);
-            users.forEach(userDAO::create);
-        }
+        Javalin app = Javalin.create(config -> {
+            config.bundledPlugins.enableRouteOverview("/api/routes");
+            config.router.apiBuilder(() -> {
+                path("/api", SecurityRoutes.getRoutes(emf, securityController));
+            });
+        })
+        .beforeMatched(securityController.authenticate())
+        .beforeMatched(securityController.authorize())
+        .exception(ApiException.class, (e, ctx) -> ctx.status(e.getCode()).json(Map.of("error", e.getMessage(), "status", e.getCode())))
+        .exception(NotAuthorizedException.class, (e, ctx) -> ctx.status(e.getStatusCode()).json(Map.of("error", e.getMessage(), "status", e.getStatusCode())))
+        .exception(ValidationException.class, (e, ctx) -> ctx.status(400).json(Map.of("error", e.getMessage())))
+        .exception(NotFoundException.class, (e, ctx) -> ctx.status(404).json(Map.of("error", e.getMessage())))
+        .exception(IllegalArgumentException.class, (e, ctx) -> ctx.status(400).json(Map.of("error", e.getMessage())))
+        .exception(PersistenceException.class, (e, ctx) -> ctx.status(409).json(Map.of("error", "Operation violates a database constraint")));
+
+        Routes.register(app, emf);
+
+        return app;
     }
-
 }

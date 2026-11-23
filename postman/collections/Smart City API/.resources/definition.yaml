@@ -1,0 +1,76 @@
+$kind: collection
+description: "Positive and negative API tests for the Smart City backend. Run the folders in order (00 to 99): later folders use the ids saved by earlier ones. Needs the backend on {{baseUrl}} and an empty or disposable database."
+variables:
+  - key: token
+    value: ""
+    disabled: false
+    secret: false
+  - key: adminToken
+    value: ""
+    disabled: false
+    secret: false
+  - key: username
+    value: ""
+    disabled: false
+    secret: false
+  - key: locationId
+    value: ""
+    disabled: false
+    secret: false
+  - key: familyId
+    value: ""
+    disabled: false
+    secret: false
+  - key: housingId
+    value: ""
+    disabled: false
+    secret: false
+  - key: citizenId
+    value: ""
+    disabled: false
+    secret: false
+  - key: citizen2Id
+    value: ""
+    disabled: false
+    secret: false
+  - key: relationshipId
+    value: ""
+    disabled: false
+    secret: false
+  - key: institutionId
+    value: ""
+    disabled: false
+    secret: false
+  - key: companyId
+    value: ""
+    disabled: false
+    secret: false
+  - key: educationId
+    value: ""
+    disabled: false
+    secret: false
+  - key: jobId
+    value: ""
+    disabled: false
+    secret: false
+  - key: pgFamily1
+    value: ""
+    disabled: false
+    secret: false
+  - key: pgFamily2
+    value: ""
+    disabled: false
+    secret: false
+  - key: pgFamily3
+    value: ""
+    disabled: false
+    secret: false
+  - key: bearer_token_0fcb
+    secret: true
+    disabled: false
+auth:
+  - id: ba40f5c3-3fb2-4e88-8bc0-1b9001fb7814
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{token}}"

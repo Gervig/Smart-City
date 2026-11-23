@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{baseUrl}}/citizen-relationships/{{relationshipId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "citizenId1": {{citizenId}},
+      "citizenId2": {{citizen2Id}},
+      "relationshipType": "marriage",
+      "startDate": "2015-06-01",
+      "endDate": "2020-01-01"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Response time is below 1500 ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+    language: text/javascript
+order: 4000

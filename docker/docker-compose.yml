@@ -1,0 +1,81 @@
+# Local development environment for Smart City.
+# Based on the school setup (https://github.com/dat2Cph/2semDockerSetupLocal): PostgreSQL + pgAdmin.
+# Changes: PostgreSQL is built with pg_cron, and MongoDB and Neo4j are added for the migrator.
+# Development only: the passwords below are not secrets.
+
+services:
+
+  db:
+    build: ./db                      # postgres:16.2 + pg_cron, see db/Dockerfile
+    container_name: db
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_cron
+      -c cron.database_name=smart_city
+    mem_limit: 1536MB
+    mem_reservation: 1024MB
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: Europe/Copenhagen
+    volumes:
+      - ./data:/var/lib/postgresql/data/
+      - ./db/init:/docker-entrypoint-initdb.d:ro   # runs once on an empty data folder
+      - ../SQL:/sql:ro                             # lets us run the repo's SQL scripts with psql
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    mem_reservation: 512MB
+    mem_limit: 1024MB
+    restart: unless-stopped
+    depends_on:
+      - db
+    volumes:
+      - ./pgadmin-data:/pgadmin
+    ports:
+      - "8080:80"
+    networks:
+      - backend
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@cphbusiness.dk
+      PGADMIN_DEFAULT_PASSWORD: 1234
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      PGADMIN_CONFIG_MAX_LOGIN_ATTEMPTS: 0
+      TZ: Europe/Copenhagen
+
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    restart: unless-stopped
+    networks:
+      - backend
+    volumes:
+      - ./mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+  neo4j:
+    image: neo4j:5
+    container_name: neo4j
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      NEO4J_AUTH: neo4j/smartcity-dev      # user/password for the browser and the driver
+    volumes:
+      - ./neo4j-data:/data
+    ports:
+      - "7474:7474"   # browser: http://localhost:7474
+      - "7687:7687"   # bolt (driver)
+
+networks:
+  backend:
+    name: backend
+    internal: false
+    driver: bridge

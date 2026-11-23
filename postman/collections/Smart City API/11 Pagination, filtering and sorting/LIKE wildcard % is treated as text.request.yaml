@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/families?familyName=%25"
+method: GET
+queryParams:
+  familyName: "%25"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      var json = pm.response.json();
+      pm.test("does not match everything", function () {
+          pm.expect(json.totalElements).to.eql(0);
+      });
+    language: text/javascript
+order: 12000

@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/jobs/999999999"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: 'pm.request.headers.upsert({key: "Authorization", value: "Bearer " + pm.collectionVariables.get("adminToken")});'
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 404", function () {
+          pm.response.to.have.status(404);
+      });
+      pm.test("Response time is below 1500 ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+      pm.test("Error body has an error message", function () {
+          var json = pm.response.json();
+          pm.expect(json).to.have.property("error");
+          pm.expect(json.error).to.be.a("string").and.not.empty;
+      });
+    language: text/javascript
+order: 5000

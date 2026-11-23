@@ -11,9 +11,8 @@ public class RolePopulator
     {
         List<Role> roles = new ArrayList<>();
 
-        Role admin = new Role("admin");
-
-        roles.add(admin);
+        roles.add(new Role("user"));
+        roles.add(new Role("admin"));
 
         return roles;
     }
