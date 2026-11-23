@@ -7,7 +7,7 @@ name: CI
 # Stress, load and spike tests are deliberately not part of this pipeline.
 on:
   push:
-    branches: [dev, main, casper-continous-integration] # TODO: remove the last branch after merging into dev
+    branches: [dev, main] # TODO: add your own branch here for the exam
   pull_request:
     branches: [dev, main]
   workflow_dispatch:
