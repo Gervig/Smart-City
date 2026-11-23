@@ -3,12 +3,16 @@ package migrator.document;
 import migrator.source.Snapshot;
 import migrator.source.Snapshot.CitizenRow;
 import migrator.source.Snapshot.CompanyRow;
+import migrator.source.Snapshot.EducationRow;
 import migrator.source.Snapshot.FamilyRow;
 import migrator.source.Snapshot.InstitutionRow;
+import migrator.source.Snapshot.JobRow;
 import migrator.source.Snapshot.LocationRow;
+import migrator.source.Snapshot.RelationshipRow;
 import org.bson.Document;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,11 +42,19 @@ public final class DocumentMapper
     /** Collection name to its documents, in the order they are written */
     public static Map<String, List<Document>> map(Snapshot s)
     {
+        // Every list is grouped once here, so building a document is a map lookup instead of a scan of a whole
+        // list (linear instead of quadratic in the number of rows). groupingBy keeps the row order in each group.
         Map<Long, LocationRow> locations = byId(s.locations(), LocationRow::id);
-        Map<Long, FamilyRow> families = byId(s.families(), FamilyRow::id);
-        Map<Long, CompanyRow> companies = byId(s.companies(), CompanyRow::id);
-        Map<Long, InstitutionRow> institutions = byId(s.institutions(), InstitutionRow::id);
-        Map<Long, CitizenRow> citizens = byId(s.citizens(), CitizenRow::id);
+        Map<Long, List<Long>> membersByFamily = s.citizens().stream().collect(Collectors.groupingBy(
+                CitizenRow::familyId, Collectors.mapping(CitizenRow::id, Collectors.toList())));
+        Map<Long, List<Long>> residentsByHousing = s.citizens().stream().filter(c -> c.housingId() != null)
+                .collect(Collectors.groupingBy(CitizenRow::housingId,
+                        Collectors.mapping(CitizenRow::id, Collectors.toList())));
+        Lookups lookups = new Lookups(byId(s.families(), FamilyRow::id), byId(s.companies(), CompanyRow::id),
+                byId(s.institutions(), InstitutionRow::id), byId(s.citizens(), CitizenRow::id),
+                s.jobs().stream().collect(Collectors.groupingBy(JobRow::citizenId)),
+                s.educationRecords().stream().collect(Collectors.groupingBy(EducationRow::citizenId)),
+                relationshipsByCitizen(s.relationships()));
 
         Map<String, List<Document>> collections = new LinkedHashMap<>();
         collections.put("locations", s.locations().stream()
@@ -50,8 +62,7 @@ public final class DocumentMapper
         collections.put("families", s.families().stream().map(f -> doc()
                 .append("_id", f.id())
                 .append("familyName", f.familyName())
-                .append("memberIds", s.citizens().stream().filter(c -> c.familyId() == f.id())
-                        .map(CitizenRow::id).toList())).toList());
+                .append("memberIds", membersByFamily.getOrDefault(f.id(), List.of()))).toList());
         collections.put("housings", s.housings().stream().map(h -> withoutNulls(doc()
                 .append("_id", h.id())
                 .append("housingType", h.housingType())
@@ -60,8 +71,7 @@ public final class DocumentMapper
                 .append("numberOfFlats", h.numberOfFlats())
                 .append("height", h.height())
                 .append("location", embeddedLocation(locations.get(h.locationId())))
-                .append("residentIds", s.citizens().stream().filter(c -> Long.valueOf(h.id()).equals(c.housingId()))
-                        .map(CitizenRow::id).toList()))).toList());
+                .append("residentIds", residentsByHousing.getOrDefault(h.id(), List.of())))).toList());
         collections.put("companies", s.companies().stream().map(c -> withoutNulls(doc()
                 .append("_id", c.id())
                 .append("name", c.name())
@@ -84,8 +94,7 @@ public final class DocumentMapper
                 .append("phone", i.phone())
                 .append("email", i.email())
                 .append("location", embeddedLocation(locations.get(i.locationId()))))).toList());
-        collections.put("citizens", s.citizens().stream()
-                .map(c -> citizen(c, s, families, companies, institutions, citizens)).toList());
+        collections.put("citizens", s.citizens().stream().map(c -> citizen(c, lookups)).toList());
         collections.put("users", s.users().stream().map(u -> doc()
                 .append("_id", u.username())
                 .append("password", u.password())
@@ -93,11 +102,29 @@ public final class DocumentMapper
         return collections;
     }
 
-    private static Document citizen(CitizenRow c, Snapshot s, Map<Long, FamilyRow> families,
-                                    Map<Long, CompanyRow> companies, Map<Long, InstitutionRow> institutions,
-                                    Map<Long, CitizenRow> citizens)
+    /** The rows by id, and the rows that belong to a citizen by citizen id, built once per migration */
+    private record Lookups(Map<Long, FamilyRow> families, Map<Long, CompanyRow> companies,
+                           Map<Long, InstitutionRow> institutions, Map<Long, CitizenRow> citizens,
+                           Map<Long, List<JobRow>> jobs, Map<Long, List<EducationRow>> education,
+                           Map<Long, List<RelationshipRow>> relationships) {}
+
+    // A relationship row links two citizens, so it is listed under both of them
+    private static Map<Long, List<RelationshipRow>> relationshipsByCitizen(List<RelationshipRow> rows)
     {
-        List<Document> jobs = s.jobs().stream().filter(j -> j.citizenId() == c.id()).map(j -> withoutNulls(doc()
+        Map<Long, List<RelationshipRow>> byCitizen = new HashMap<>();
+        for (RelationshipRow r : rows)
+        {
+            byCitizen.computeIfAbsent(r.citizenId1(), id -> new ArrayList<>()).add(r);
+            byCitizen.computeIfAbsent(r.citizenId2(), id -> new ArrayList<>()).add(r);
+        }
+        return byCitizen;
+    }
+
+    private static Document citizen(CitizenRow c, Lookups lookups)
+    {
+        Map<Long, CompanyRow> companies = lookups.companies();
+        Map<Long, InstitutionRow> institutions = lookups.institutions();
+        List<Document> jobs = lookups.jobs().getOrDefault(c.id(), List.of()).stream().map(j -> withoutNulls(doc()
                 .append("id", j.id())
                 .append("title", j.title())
                 .append("salary", j.salary())
@@ -110,7 +137,7 @@ public final class DocumentMapper
                         : doc().append("type", "institution").append("id", j.institutionId())
                                 .append("name", institutions.get(j.institutionId()).name())))).toList();
 
-        List<Document> education = s.educationRecords().stream().filter(e -> e.citizenId() == c.id())
+        List<Document> education = lookups.education().getOrDefault(c.id(), List.of()).stream()
                 .map(e -> withoutNulls(doc()
                         .append("id", e.id())
                         .append("institution", doc().append("id", e.institutionId())
@@ -119,26 +146,21 @@ public final class DocumentMapper
                         .append("startDate", e.startDate())
                         .append("endDate", e.endDate()))).toList();
 
-        // A relationship row links two citizens; each of them gets it, pointing at the other one
-        List<Document> relationships = new ArrayList<>();
-        s.relationships().forEach(r ->
+        // Each of the two citizens gets the relationship, pointing at the other one
+        List<Document> relationships = lookups.relationships().getOrDefault(c.id(), List.of()).stream().map(r ->
         {
-            Long other = r.citizenId1() == c.id() ? Long.valueOf(r.citizenId2())
-                    : r.citizenId2() == c.id() ? Long.valueOf(r.citizenId1()) : null;
-            if (other != null)
-            {
-                CitizenRow o = citizens.get(other);
-                relationships.add(withoutNulls(doc()
-                        .append("id", r.id())
-                        .append("type", r.type())
-                        .append("citizenId", other)
-                        .append("name", o.firstName() + " " + o.lastName())
-                        .append("startDate", r.startDate())
-                        .append("endDate", r.endDate())));
-            }
-        });
+            long other = r.citizenId1() == c.id() ? r.citizenId2() : r.citizenId1();
+            CitizenRow o = lookups.citizens().get(other);
+            return withoutNulls(doc()
+                    .append("id", r.id())
+                    .append("type", r.type())
+                    .append("citizenId", other)
+                    .append("name", o.firstName() + " " + o.lastName())
+                    .append("startDate", r.startDate())
+                    .append("endDate", r.endDate()));
+        }).toList();
 
-        FamilyRow family = families.get(c.familyId());
+        FamilyRow family = lookups.families().get(c.familyId());
         return withoutNulls(doc()
                 .append("_id", c.id())
                 .append("firstName", c.firstName())
