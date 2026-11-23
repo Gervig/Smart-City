@@ -22,7 +22,7 @@ import java.util.Set;
 public class HttpOverpassClient implements OverpassClient, OverpassImportClient {
     public static final String DEFAULT_ENDPOINT_URL = "https://overpass-api.de/api/interpreter";
     public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
-    private static final int MAX_RADIUS_METERS = 5000; // [CHANGED] Upper bound for radiusMeters in findNearby
+    private static final int MAX_RADIUS_METERS = 5000;
 
     private final String endpointUrl;
     private final Duration timeout;
@@ -32,7 +32,6 @@ public class HttpOverpassClient implements OverpassClient, OverpassImportClient 
     private long accumulatedSleepNanos;
     private long lastRequestNanos;
 
-    // [CHANGED] Renamed from IMPORT_AMENITIES so both findNearby and findInArea use the same allow-list
     private static final Set<String> ALLOWED_AMENITIES = Set.of(
             "hospital", "school", "college", "pharmacy", "restaurant", "cafe", "library", "bank");
 
@@ -41,7 +40,6 @@ public class HttpOverpassClient implements OverpassClient, OverpassImportClient 
     }
 
     public HttpOverpassClient(String endpointUrl, Duration timeout, Sleeper sleeper) {
-        // [CHANGED] Validate endpointUrl format/scheme/host and require non-null timeout and sleeper
         this.endpointUrl = validateEndpointUrl(endpointUrl);
         this.timeout = Objects.requireNonNull(timeout, "timeout is required");
         this.sleeper = Objects.requireNonNull(sleeper, "sleeper is required");
@@ -50,7 +48,6 @@ public class HttpOverpassClient implements OverpassClient, OverpassImportClient 
 
     @Override
     public List<NearbyPlace> findNearby(double latitude, double longitude, int radiusMeters, String amenity) {
-        // [CHANGED] Validate coordinates, radius range, and amenity before building Overpass QL
         validateLatitude(latitude, "latitude");
         validateLongitude(longitude, "longitude");
         if (radiusMeters < 1 || radiusMeters > MAX_RADIUS_METERS) {
@@ -96,7 +93,6 @@ public class HttpOverpassClient implements OverpassClient, OverpassImportClient 
 
     @Override
     public List<OsmElement> findInArea(double south, double west, double north, double east, String amenity, int limit) {
-        // [CHANGED] Validate bounding-box coordinates, south <= north ordering, and amenity allow-list
         validateLatitude(south, "south");
         validateLatitude(north, "north");
         validateLongitude(west, "west");
@@ -131,28 +127,24 @@ public class HttpOverpassClient implements OverpassClient, OverpassImportClient 
         return parseOsmElements(sendImportQuery(query));
     }
 
-    // [CHANGED] New helper to enforce ALLOWED_AMENITIES consistently
     private void validateAmenity(String amenity) {
         if (amenity == null || !ALLOWED_AMENITIES.contains(amenity)) {
             throw new IllegalArgumentException("amenity is not supported");
         }
     }
 
-    // [CHANGED] New helper to ensure latitude is finite and within [-90, 90]
     private void validateLatitude(double value, String name) {
         if (!Double.isFinite(value) || value < -90.0 || value > 90.0) {
             throw new IllegalArgumentException(name + " must be a finite number between -90 and 90");
         }
     }
 
-    // [CHANGED] New helper to ensure longitude is finite and within [-180, 180]
     private void validateLongitude(double value, String name) {
         if (!Double.isFinite(value) || value < -180.0 || value > 180.0) {
             throw new IllegalArgumentException(name + " must be a finite number between -180 and 180");
         }
     }
 
-    // [CHANGED] New helper to require a non-blank HTTP/HTTPS URI with a host
     private static String validateEndpointUrl(String endpointUrl) {
         if (endpointUrl == null || endpointUrl.isBlank()) {
             throw new IllegalArgumentException("endpointUrl is required");

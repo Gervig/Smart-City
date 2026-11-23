@@ -1,8 +1,8 @@
 package app.daos;
 
 import app.entities.Citizen;
-import app.entities.Family; // [CHANGED] Added for ALLOWED_COUNT_PATHS
-import app.entities.Institution; // [CHANGED] Added for ALLOWED_COUNT_PATHS
+import app.entities.Family;
+import app.entities.Institution;
 import app.exceptions.NotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -34,7 +34,6 @@ public class GenericDAO<T>
             Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(?>\\.[A-Za-z_][A-Za-z0-9_]*)*");
 
 
-    // [CHANGED] Expanded allow-list with paths used by tests and services
     private static final Map<Class<?>, Set<String>> ALLOWED_COUNT_PATHS = Map.of(
             Citizen.class, Set.of("housing.id", "firstName"),
             Family.class, Set.of("familyName"),
@@ -46,7 +45,6 @@ public class GenericDAO<T>
 
     public GenericDAO(EntityManagerFactory emf, Class<T> type)
     {
-        // [CHANGED] Fail fast with NullPointerException if emf or type is null
         this.emf = Objects.requireNonNull(emf, "EntityManagerFactory is required");
         this.type = Objects.requireNonNull(type, "Entity type is required");
     }
@@ -420,7 +418,6 @@ public class GenericDAO<T>
 
     public long countWhere(String attributePath, Object value)
     {
-        // [CHANGED] Validate attributePath before interpolating it into the JPQL query
         String validatedPath = validateAttributePath(attributePath);
         try (EntityManager em = emf.createEntityManager())
         {
@@ -433,7 +430,6 @@ public class GenericDAO<T>
         }
     }
 
-    // [CHANGED] New helper method to enforce format and allow-list rules on attributePath
     private String validateAttributePath(String attributePath)
     {
         if (attributePath == null || attributePath.isBlank())

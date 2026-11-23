@@ -19,7 +19,6 @@ public final class Check {
         }
     }
 
-    // [CHANGED] Added max-length check to reject overly long string inputs
     public static void requireMaxLength(String field, String value, int maxLength) {
         if (maxLength < 1) {
             throw new IllegalArgumentException("maxLength must be positive");
@@ -29,7 +28,6 @@ public final class Check {
         }
     }
 
-    // [CHANGED] Added control-character check to block ASCII control chars (0x00-0x1F) and DEL (0x7F)
     public static void requireNoControlChars(String field, String value) {
         if (value == null) {
             return;
