@@ -43,7 +43,7 @@ export async function request(path, { method = 'GET', body, token } = {}) {
         ? `The API is not responding (status ${response.status}). Is the backend running?`
         : `Request failed with status ${response.status}`
     }
-    throw new ApiError(response.status, message)
+    throw new ApiError(response.status, `HTTP ${response.status}: ${message}; response body: ${text || '(empty)'}`)
   }
   return data
 }
