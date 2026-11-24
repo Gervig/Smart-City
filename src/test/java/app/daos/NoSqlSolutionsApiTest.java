@@ -302,7 +302,7 @@ class NoSqlSolutionsApiTest
         City city = city(db);
         String admin = adminToken(db);
         Map<String, Object> dead = citizen("Anna", city.familyId, null, "2024-05-01");
-        dead.put("status", "dead");
+        dead.put("status", "deceased");
 
         // Act
         withToken(admin).contentType(ContentType.JSON).body(dead).when().put(db + "/citizens/" + city.citizenId)
