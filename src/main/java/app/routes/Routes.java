@@ -163,6 +163,25 @@ public class Routes {
         );
     }
 
+    /**
+     * The same nine resources for another database solution, under a prefix: /mongodb/citizens, /neo4j/jobs, ...
+     * The controllers, DTOs, validators, paging and role rules (including the admin-only salary in JobController) are
+     * the ones the PostgreSQL routes use; only the services behind them differ.
+     */
+    public static void registerSolution(Javalin app, String prefix, CrudServices s) {
+        crud(app, prefix + "/locations", new CrudController<>(s.locations(), LocationRequestDTO.class));
+        crud(app, prefix + "/families", new CrudController<>(s.families(), FamilyRequestDTO.class));
+        crud(app, prefix + "/housings", new CrudController<>(s.housings(), HousingRequestDTO.class));
+        crud(app, prefix + "/citizens", new CrudController<>(s.citizens(), CitizenRequestDTO.class));
+        crud(app, prefix + "/citizen-relationships",
+                new CrudController<>(s.relationships(), CitizenRelationshipRequestDTO.class));
+        crud(app, prefix + "/institutions", new CrudController<>(s.institutions(), InstitutionRequestDTO.class));
+        crud(app, prefix + "/companies", new CrudController<>(s.companies(), CompanyRequestDTO.class));
+        crud(app, prefix + "/education-records",
+                new CrudController<>(s.educationRecords(), EducationRecordRequestDTO.class));
+        crud(app, prefix + "/jobs", new JobController(s.jobs()), ADMINS);
+    }
+
     // Role rules: users and administrators have full CRUD on all city data.
     // Job salary information is restricted to administrators.
     // Without a valid token every protected route answers 401;

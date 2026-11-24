@@ -51,6 +51,15 @@ public class Neo4jWriter
     /** @return number of nodes per label and relationships per type, counted in Neo4j after writing */
     public Map<String, Long> write(List<GraphMapper.Step> steps)
     {
+        return write(steps, Map.of());
+    }
+
+    /**
+     * @param sequences the highest id per entity, stored as (:Sequence {name, value}) so the CRUD application
+     *                  continues after the migrated ids
+     */
+    public Map<String, Long> write(List<GraphMapper.Step> steps, Map<String, Long> sequences)
+    {
         try (Driver driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password));
              Session session = driver.session())
         {
@@ -67,6 +76,10 @@ public class Neo4jWriter
                         tx.run(step.cypher(), Map.of("rows", step.rows())).consume();
                     }
                 }
+                List<Map<String, Object>> rows = sequences.entrySet().stream()
+                        .map(e -> Map.<String, Object>of("name", e.getKey(), "value", e.getValue())).toList();
+                tx.run("UNWIND $rows AS row MERGE (s:Sequence {name: row.name}) SET s.value = row.value",
+                        Map.of("rows", rows)).consume();
             });
 
             Map<String, Long> counts = new LinkedHashMap<>();
