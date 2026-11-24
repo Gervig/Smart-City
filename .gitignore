@@ -45,3 +45,4 @@ docs/sonarqube.txt
 
 # Database backups
 /backups/
+newman-output.txt
