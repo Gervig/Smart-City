@@ -1,5 +1,5 @@
 $kind: http-request
-name: "Create citizen: dead without a deathDate (400)"
+name: "Create citizen: deceased without a deathDate (400)"
 url: "{{baseUrl}}/citizens"
 method: POST
 headers:
@@ -12,7 +12,7 @@ body:
       "lastName": "Postmansen",
       "birthDate": "1990-05-17",
       "deathDate": null,
-      "status": "dead",
+      "status": "deceased",
       "gender": "female",
       "familyId": {{familyId}},
       "housingId": null

@@ -2049,7 +2049,7 @@
           ]
         },
         {
-          "name": "Create citizen: dead without a deathDate (400)",
+          "name": "Create citizen: deceased without a deathDate (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -2069,7 +2069,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Anna\",\n  \"lastName\": \"Postmansen\",\n  \"birthDate\": \"1990-05-17\",\n  \"deathDate\": null,\n  \"status\": \"dead\",\n  \"gender\": \"female\",\n  \"familyId\": {{familyId}},\n  \"housingId\": null\n}",
+              "raw": "{\n  \"firstName\": \"Anna\",\n  \"lastName\": \"Postmansen\",\n  \"birthDate\": \"1990-05-17\",\n  \"deathDate\": null,\n  \"status\": \"deceased\",\n  \"gender\": \"female\",\n  \"familyId\": {{familyId}},\n  \"housingId\": null\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2121,7 +2121,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Anna\",\n  \"lastName\": \"Postmansen\",\n  \"birthDate\": \"1990-05-17\",\n  \"deathDate\": \"1980-01-01\",\n  \"status\": \"dead\",\n  \"gender\": \"female\",\n  \"familyId\": {{familyId}},\n  \"housingId\": null\n}",
+              "raw": "{\n  \"firstName\": \"Anna\",\n  \"lastName\": \"Postmansen\",\n  \"birthDate\": \"1990-05-17\",\n  \"deathDate\": \"1980-01-01\",\n  \"status\": \"deceased\",\n  \"gender\": \"female\",\n  \"familyId\": {{familyId}},\n  \"housingId\": null\n}",
               "options": {
                 "raw": {
                   "language": "json"

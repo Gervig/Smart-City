@@ -94,7 +94,7 @@ const schemas = {
       lastName: text,
       birthDate: date,
       deathDate: date,
-      status: { enum: ['alive', 'dead'] },
+      status: { enum: ['alive', 'deceased'] },
       gender: text,
       family: { bsonType: 'object', required: ['id', 'familyName'], properties: { id: id, familyName: text } },
       housingId: id,
@@ -170,8 +170,8 @@ for (const [name, schema] of Object.entries(schemas)) {
 // replaced, because MongoDB does not allow the same keys twice
 function ensureIndex(collection, keys, name) {
   db.getCollection(collection).getIndexes()
-    .filter(index => index.name !== name && JSON.stringify(index.key) === JSON.stringify(keys))
-    .forEach(index => db.getCollection(collection).dropIndex(index.name));
+      .filter(index => index.name !== name && JSON.stringify(index.key) === JSON.stringify(keys))
+      .forEach(index => db.getCollection(collection).dropIndex(index.name));
   db.getCollection(collection).createIndex(keys, { name: name });
 }
 

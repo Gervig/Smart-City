@@ -49,7 +49,7 @@ public final class CitizenGenerator
         citizen.setLastName(LAST_NAMES.get(random.nextInt(LAST_NAMES.size())));
         citizen.setBirthDate(birthDate);
         citizen.setDeathDate(deathDate);
-        citizen.setStatus(dead ? "dead" : "alive");
+        citizen.setStatus(dead ? "deceased" : "alive");
         citizen.setGender(GENDERS.get(random.nextInt(GENDERS.size())));
         CitizenValidator.validate(new CitizenRequestDTO(citizen.getFirstName(), citizen.getLastName(), birthDate,
                 deathDate, citizen.getStatus(), citizen.getGender(), null, null));

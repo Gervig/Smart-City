@@ -25,16 +25,16 @@ public final class CitizenValidator {
 
         Check.requireMaxLength("status", request.status(), MAX_STATUS_LENGTH);
         Check.requireNoControlChars("status", request.status());
-        Check.requireOneOf("status", request.status(), "alive", "dead");
+        Check.requireOneOf("status", request.status(), "alive", "deceased");
 
         if ("alive".equals(request.status()) && request.deathDate() != null) {
             throw new IllegalArgumentException("deathDate must be null when status is alive");
         }
-        if ("dead".equals(request.status()) && request.deathDate() == null) {
-            throw new IllegalArgumentException("deathDate is required when status is dead");
+        if ("deceased".equals(request.status()) && request.deathDate() == null) {
+            throw new IllegalArgumentException("deathDate is required when status is deceased");
         }
-        if ("dead".equals(request.status()) && request.housingId() != null) {
-            throw new IllegalArgumentException("housingId must be null for a dead citizen");
+        if ("deceased".equals(request.status()) && request.housingId() != null) {
+            throw new IllegalArgumentException("housingId must be null for a deceased citizen");
         }
     }
 }

@@ -44,7 +44,7 @@ class CitizenGeneratorTest
             CitizenValidator.validate(request(citizen));
             assertFalse(citizen.getBirthDate().isBefore(LocalDate.of(1930, 1, 1)));
             assertFalse(citizen.getBirthDate().isAfter(LocalDate.of(2020, 12, 31)));
-            if ("dead".equals(citizen.getStatus()))
+            if ("deceased".equals(citizen.getStatus()))
             {
                 assertNotEquals(null, citizen.getDeathDate());
                 assertFalse(citizen.getDeathDate().isBefore(citizen.getBirthDate()));

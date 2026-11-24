@@ -22,7 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Covers requirement(s): FR-08, FR-09, FR-13
+ - Covers requirement(s): FR-08, FR-09, FR-13
  */
 @ExtendWith(MockitoExtension.class)
 class CitizenServiceTest
@@ -141,15 +141,15 @@ class CitizenServiceTest
     }
 
     @Test
-    @DisplayName("rejects housing for a dead citizen")
-    void createDeadCitizenWithHousing()
+    @DisplayName("rejects housing for a deceased citizen")
+    void createDeceasedCitizenWithHousing()
     {
         // Arrange
         LocalDate date = LocalDate.now().minusYears(10);
 
         // Act
         assertThrows(IllegalArgumentException.class,
-                () -> service.create(request(date, date, "dead", 2L)));
+                () -> service.create(request(date, date, "deceased", 2L)));
 
         // Assert
         verify(citizenDAO, never()).persist(any());

@@ -25,7 +25,7 @@ SET row_security = off;
 
 CREATE PROCEDURE public.add_education_record(IN p_citizen_id bigint, IN p_institution_id bigint, IN p_start_date date, IN p_end_date date DEFAULT NULL::date)
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM citizen WHERE id = p_citizen_id
@@ -51,11 +51,11 @@ BEGIN
         end_date
     )
     VALUES (
-        p_citizen_id,
-        p_institution_id,
-        p_start_date,
-        p_end_date
-    );
+               p_citizen_id,
+               p_institution_id,
+               p_start_date,
+               p_end_date
+           );
 END;
 $$;
 
@@ -69,7 +69,7 @@ ALTER PROCEDURE public.add_education_record(IN p_citizen_id bigint, IN p_institu
 
 CREATE PROCEDURE public.add_relationship(IN p_citizen_id_1 bigint, IN p_citizen_id_2 bigint, IN p_relationship_type character varying, IN p_start_date date, IN p_end_date date DEFAULT NULL::date)
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     IF p_citizen_id_1 = p_citizen_id_2 THEN
         RAISE EXCEPTION 'A citizen cannot have a relationship with themselves';
@@ -95,12 +95,12 @@ BEGIN
         end_date
     )
     VALUES (
-        p_citizen_id_1,
-        p_citizen_id_2,
-        p_relationship_type,
-        p_start_date,
-        p_end_date
-    );
+               p_citizen_id_1,
+               p_citizen_id_2,
+               p_relationship_type,
+               p_start_date,
+               p_end_date
+           );
 END;
 $$;
 
@@ -114,7 +114,7 @@ ALTER PROCEDURE public.add_relationship(IN p_citizen_id_1 bigint, IN p_citizen_i
 
 CREATE FUNCTION public.check_housing_capacity() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$
+AS $$
 DECLARE
     current_occupants INTEGER;
     max_capacity INTEGER;
@@ -155,7 +155,7 @@ ALTER FUNCTION public.check_housing_capacity() OWNER TO postgres;
 
 CREATE FUNCTION public.clear_all_table_data() RETURNS void
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     TRUNCATE TABLE
         citizen_relationship,
@@ -167,7 +167,7 @@ BEGIN
         company,
         institution,
         location
-    RESTART IDENTITY CASCADE;
+        RESTART IDENTITY CASCADE;
 
     -- Also clear the optional statistics table, if it exists.
     IF to_regclass('public.statistics_snapshot') IS NOT NULL THEN
@@ -187,7 +187,7 @@ ALTER FUNCTION public.clear_all_table_data() OWNER TO postgres;
 
 CREATE FUNCTION public.count_citizen_jobs(p_citizen_id bigint) RETURNS integer
     LANGUAGE plpgsql
-    AS $$
+AS $$
 DECLARE
     job_count INTEGER;
 BEGIN
@@ -210,16 +210,16 @@ ALTER FUNCTION public.count_citizen_jobs(p_citizen_id bigint) OWNER TO postgres;
 
 CREATE FUNCTION public.create_statistics_snapshot() RETURNS void
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     -- Create the statistics table if it does not already exist
     CREATE TABLE IF NOT EXISTS statistics_snapshot (
-        snapshot_date DATE PRIMARY KEY,
-        citizen_count INTEGER NOT NULL,
-        employed_citizen_count INTEGER NOT NULL,
-        housing_count INTEGER NOT NULL,
-        company_count INTEGER NOT NULL,
-        institution_count INTEGER NOT NULL
+                                                       snapshot_date DATE PRIMARY KEY,
+                                                       citizen_count INTEGER NOT NULL,
+                                                       employed_citizen_count INTEGER NOT NULL,
+                                                       housing_count INTEGER NOT NULL,
+                                                       company_count INTEGER NOT NULL,
+                                                       institution_count INTEGER NOT NULL
     );
 
     -- Take a snapshot of the current database state
@@ -232,21 +232,21 @@ BEGIN
         institution_count
     )
     SELECT
-        CURRENT_DATE,
-        (SELECT COUNT(*) FROM citizen),
-        (SELECT COUNT(DISTINCT citizen_id)
-         FROM job
-         WHERE end_date IS NULL),
-        (SELECT COUNT(*) FROM housing),
-        (SELECT COUNT(*) FROM company),
-        (SELECT COUNT(*) FROM institution)
+                CURRENT_DATE,
+                (SELECT COUNT(*) FROM citizen),
+                (SELECT COUNT(DISTINCT citizen_id)
+                 FROM job
+                 WHERE end_date IS NULL),
+                (SELECT COUNT(*) FROM housing),
+                (SELECT COUNT(*) FROM company),
+                (SELECT COUNT(*) FROM institution)
     ON CONFLICT (snapshot_date)
-    DO UPDATE SET
-        citizen_count = EXCLUDED.citizen_count,
-        employed_citizen_count = EXCLUDED.employed_citizen_count,
-        housing_count = EXCLUDED.housing_count,
-        company_count = EXCLUDED.company_count,
-        institution_count = EXCLUDED.institution_count;
+        DO UPDATE SET
+                      citizen_count = EXCLUDED.citizen_count,
+                      employed_citizen_count = EXCLUDED.employed_citizen_count,
+                      housing_count = EXCLUDED.housing_count,
+                      company_count = EXCLUDED.company_count,
+                      institution_count = EXCLUDED.institution_count;
 END;
 $$;
 
@@ -260,7 +260,7 @@ ALTER FUNCTION public.create_statistics_snapshot() OWNER TO postgres;
 
 CREATE PROCEDURE public.end_job(IN p_job_id bigint, IN p_end_date date)
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM job WHERE id = p_job_id
@@ -286,15 +286,15 @@ ALTER PROCEDURE public.end_job(IN p_job_id bigint, IN p_end_date date) OWNER TO 
 
 CREATE FUNCTION public.have_relationship(p_citizen_id_1 bigint, p_citizen_id_2 bigint, p_relationship_type character varying) RETURNS boolean
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     RETURN EXISTS (
         SELECT 1
         FROM citizen_relationship
         WHERE LEAST(citizen_id_1, citizen_id_2)
-              = LEAST(p_citizen_id_1, p_citizen_id_2)
+            = LEAST(p_citizen_id_1, p_citizen_id_2)
           AND GREATEST(citizen_id_1, citizen_id_2)
-              = GREATEST(p_citizen_id_1, p_citizen_id_2)
+            = GREATEST(p_citizen_id_1, p_citizen_id_2)
           AND relationship_type = p_relationship_type
     );
 END;
@@ -310,7 +310,7 @@ ALTER FUNCTION public.have_relationship(p_citizen_id_1 bigint, p_citizen_id_2 bi
 
 CREATE FUNCTION public.housing_occupancy(p_housing_id bigint) RETURNS integer
     LANGUAGE plpgsql
-    AS $$
+AS $$
 DECLARE
     occupants INTEGER;
 BEGIN
@@ -333,7 +333,7 @@ ALTER FUNCTION public.housing_occupancy(p_housing_id bigint) OWNER TO postgres;
 
 CREATE FUNCTION public.is_citizen_employed(p_citizen_id bigint) RETURNS boolean
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     RETURN EXISTS (
         SELECT 1
@@ -354,7 +354,7 @@ ALTER FUNCTION public.is_citizen_employed(p_citizen_id bigint) OWNER TO postgres
 
 CREATE FUNCTION public.populate_test_data() RETURNS void
     LANGUAGE plpgsql
-    AS $$
+AS $$
 DECLARE
     i INTEGER;
     v_family_id BIGINT;
@@ -374,152 +374,152 @@ DECLARE
     v_first_names TEXT[] := ARRAY[
         'Alex', 'Sam', 'Jordan', 'Taylor', 'Morgan',
         'Jamie', 'Robin', 'Casey', 'Avery', 'Riley'
-    ];
+        ];
 
     v_last_names TEXT[] := ARRAY[
         'Andersen', 'Nielsen', 'Hansen', 'Larsen', 'Pedersen',
         'Jensen', 'Madsen', 'Kristensen', 'Olsen', 'Thomsen'
-    ];
+        ];
 BEGIN
     -- Remove the previous generated batch, if any.
     PERFORM remove_test_data();
 
     -- 1. Create 20 families.
     FOR i IN 1..20 LOOP
-        INSERT INTO family (family_name)
-        VALUES ('TEST_DATA_FAMILY_' || i)
-        RETURNING id INTO v_family_id;
+            INSERT INTO family (family_name)
+            VALUES ('TEST_DATA_FAMILY_' || i)
+            RETURNING id INTO v_family_id;
 
-        v_families := array_append(v_families, v_family_id);
-    END LOOP;
+            v_families := array_append(v_families, v_family_id);
+        END LOOP;
 
     -- 2. Create 5 locations.
     FOR i IN 1..5 LOOP
-        INSERT INTO location (name, street_address)
-        VALUES (
-            'TEST_DATA_LOCATION_' || i,
-            'Test Street ' || i
-        )
-        RETURNING id INTO v_location_id;
+            INSERT INTO location (name, street_address)
+            VALUES (
+                       'TEST_DATA_LOCATION_' || i,
+                       'Test Street ' || i
+                   )
+            RETURNING id INTO v_location_id;
 
-        v_locations := array_append(v_locations, v_location_id);
-    END LOOP;
+            v_locations := array_append(v_locations, v_location_id);
+        END LOOP;
 
     -- 3. Create 10 housing records.
     FOR i IN 1..10 LOOP
-        INSERT INTO housing (location_id, housing_type, capacity)
-        VALUES (
-            v_locations[((i - 1) % 5) + 1],
-            'apartment',
-            50
-        )
-        RETURNING id INTO v_housing_id;
+            INSERT INTO housing (location_id, housing_type, capacity)
+            VALUES (
+                       v_locations[((i - 1) % 5) + 1],
+                       'apartment',
+                       50
+                   )
+            RETURNING id INTO v_housing_id;
 
-        v_housings := array_append(v_housings, v_housing_id);
-    END LOOP;
+            v_housings := array_append(v_housings, v_housing_id);
+        END LOOP;
 
     -- 4. Create 10 companies.
     FOR i IN 1..10 LOOP
-        INSERT INTO company (
-            location_id, name, founded_date, dissolved_date, status
-        )
-        VALUES (
-            v_locations[((i - 1) % 5) + 1],
-            'TEST_DATA_COMPANY_' || i,
-            DATE '2000-01-01' + (i * 100),
-            NULL,
-            'active'
-        )
-        RETURNING id INTO v_company_id;
+            INSERT INTO company (
+                location_id, name, founded_date, dissolved_date, status
+            )
+            VALUES (
+                       v_locations[((i - 1) % 5) + 1],
+                       'TEST_DATA_COMPANY_' || i,
+                       DATE '2000-01-01' + (i * 100),
+                       NULL,
+                       'active'
+                   )
+            RETURNING id INTO v_company_id;
 
-        v_companies := array_append(v_companies, v_company_id);
-    END LOOP;
+            v_companies := array_append(v_companies, v_company_id);
+        END LOOP;
 
-	-- 5. Create 5 institutions.
-	FOR i IN 1..5 LOOP
-		INSERT INTO institution (location_id, name, type)
-		VALUES (
-			v_locations[i],
-			'TEST_DATA_INSTITUTION_' || i,
-			'high_school'
-		)
-		RETURNING id INTO v_institution_id;
+    -- 5. Create 5 institutions.
+    FOR i IN 1..5 LOOP
+            INSERT INTO institution (location_id, name, type)
+            VALUES (
+                       v_locations[i],
+                       'TEST_DATA_INSTITUTION_' || i,
+                       'high_school'
+                   )
+            RETURNING id INTO v_institution_id;
 
-		v_institutions := array_append(
-			v_institutions, v_institution_id
-		);
-	END LOOP;
+            v_institutions := array_append(
+                    v_institutions, v_institution_id
+                              );
+        END LOOP;
 
     -- 6. Create 200 citizens.
     FOR i IN 1..200 LOOP
-        INSERT INTO citizen (
-            first_name, last_name, birth_date,
-            death_date, status, gender, family_id, housing_id
-        )
-        VALUES (
-            v_first_names[1 + floor(random() * 10)::INTEGER],
-            v_last_names[1 + floor(random() * 10)::INTEGER],
-            DATE '1970-01-01' + (floor(random() * 12000)::INTEGER),
-            NULL,
-            'alive',
-            (ARRAY['female', 'male', 'other'])
-                [1 + floor(random() * 3)::INTEGER],
-            v_families[1 + floor(random() * 20)::INTEGER],
-            v_housings[1 + floor(random() * 10)::INTEGER]
-        )
-        RETURNING id INTO v_citizen_id;
+            INSERT INTO citizen (
+                first_name, last_name, birth_date,
+                death_date, status, gender, family_id, housing_id
+            )
+            VALUES (
+                       v_first_names[1 + floor(random() * 10)::INTEGER],
+                       v_last_names[1 + floor(random() * 10)::INTEGER],
+                       DATE '1970-01-01' + (floor(random() * 12000)::INTEGER),
+                       NULL,
+                       'alive',
+                       (ARRAY['female', 'male', 'other'])
+                           [1 + floor(random() * 3)::INTEGER],
+                       v_families[1 + floor(random() * 20)::INTEGER],
+                       v_housings[1 + floor(random() * 10)::INTEGER]
+                   )
+            RETURNING id INTO v_citizen_id;
 
-        v_citizens := array_append(v_citizens, v_citizen_id);
-    END LOOP;
+            v_citizens := array_append(v_citizens, v_citizen_id);
+        END LOOP;
 
     -- 7. Create 100 job records.
     FOR i IN 1..100 LOOP
-        INSERT INTO job (
-            citizen_id, company_id, institution_id,
-            title, salary, start_date, end_date, status
-        )
-        VALUES (
-            v_citizens[i],
-            v_companies[1 + floor(random() * 10)::INTEGER],
-            NULL,
-            'Test Employee',
-            30000 + floor(random() * 50000)::INTEGER,
-            DATE '2015-01-01' + (i * 10),
-            NULL,
-            'active'
-        );
-    END LOOP;
+            INSERT INTO job (
+                citizen_id, company_id, institution_id,
+                title, salary, start_date, end_date, status
+            )
+            VALUES (
+                       v_citizens[i],
+                       v_companies[1 + floor(random() * 10)::INTEGER],
+                       NULL,
+                       'Test Employee',
+                       30000 + floor(random() * 50000)::INTEGER,
+                       DATE '2015-01-01' + (i * 10),
+                       NULL,
+                       'active'
+                   );
+        END LOOP;
 
     -- 8. Create 100 education records.
     FOR i IN 1..100 LOOP
-        INSERT INTO education_record (
-            citizen_id, institution_id, start_date, end_date
-        )
-        VALUES (
-            v_citizens[i],
-            v_institutions[1 + floor(random() * 5)::INTEGER],
-            DATE '2005-01-01' + (i * 5),
-            NULL
-        );
-    END LOOP;
+            INSERT INTO education_record (
+                citizen_id, institution_id, start_date, end_date
+            )
+            VALUES (
+                       v_citizens[i],
+                       v_institutions[1 + floor(random() * 5)::INTEGER],
+                       DATE '2005-01-01' + (i * 5),
+                       NULL
+                   );
+        END LOOP;
 
-	-- 9. Create 100 parent-child relationships.
-	FOR i IN 1..100 LOOP
-		INSERT INTO citizen_relationship (
-			citizen_id_1,
-			citizen_id_2,
-			relationship_type,
-			start_date,
-			end_date
-		)
-		VALUES (
-			v_citizens[i],
-			v_citizens[i + 100],
-			'parent_child',
-			DATE '2020-01-01',
-			NULL
-		);
-	END LOOP;
+    -- 9. Create 100 parent-child relationships.
+    FOR i IN 1..100 LOOP
+            INSERT INTO citizen_relationship (
+                citizen_id_1,
+                citizen_id_2,
+                relationship_type,
+                start_date,
+                end_date
+            )
+            VALUES (
+                       v_citizens[i],
+                       v_citizens[i + 100],
+                       'parent_child',
+                       DATE '2020-01-01',
+                       NULL
+                   );
+        END LOOP;
 END;
 $$;
 
@@ -533,22 +533,22 @@ ALTER FUNCTION public.populate_test_data() OWNER TO postgres;
 
 CREATE PROCEDURE public.register_citizen(IN p_first_name character varying, IN p_last_name character varying, IN p_birth_date date, IN p_gender character varying, IN p_family_id bigint DEFAULT NULL::bigint, IN p_housing_id bigint DEFAULT NULL::bigint)
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     -- Check that the family exists if one was provided
     IF p_family_id IS NOT NULL
-       AND NOT EXISTS (
-           SELECT 1 FROM family WHERE id = p_family_id
-       )
+        AND NOT EXISTS (
+            SELECT 1 FROM family WHERE id = p_family_id
+        )
     THEN
         RAISE EXCEPTION 'Family with ID % does not exist', p_family_id;
     END IF;
 
     -- Check that the housing exists if one was provided
     IF p_housing_id IS NOT NULL
-       AND NOT EXISTS (
-           SELECT 1 FROM housing WHERE id = p_housing_id
-       )
+        AND NOT EXISTS (
+            SELECT 1 FROM housing WHERE id = p_housing_id
+        )
     THEN
         RAISE EXCEPTION 'Housing with ID % does not exist', p_housing_id;
     END IF;
@@ -562,13 +562,13 @@ BEGIN
         housing_id
     )
     VALUES (
-        p_first_name,
-        p_last_name,
-        p_birth_date,
-        p_gender,
-        p_family_id,
-        p_housing_id
-    );
+               p_first_name,
+               p_last_name,
+               p_birth_date,
+               p_gender,
+               p_family_id,
+               p_housing_id
+           );
 END;
 $$;
 
@@ -582,20 +582,20 @@ ALTER PROCEDURE public.register_citizen(IN p_first_name character varying, IN p_
 
 CREATE FUNCTION public.remove_test_data() RETURNS void
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     -- Delete relationships involving generated citizens.
     DELETE FROM citizen_relationship
     WHERE citizen_id_1 IN (
         SELECT c.id
         FROM citizen c
-        JOIN family f ON f.id = c.family_id
+                 JOIN family f ON f.id = c.family_id
         WHERE f.family_name LIKE 'TEST_DATA_FAMILY_%'
     )
-    OR citizen_id_2 IN (
+       OR citizen_id_2 IN (
         SELECT c.id
         FROM citizen c
-        JOIN family f ON f.id = c.family_id
+                 JOIN family f ON f.id = c.family_id
         WHERE f.family_name LIKE 'TEST_DATA_FAMILY_%'
     );
 
@@ -604,14 +604,14 @@ BEGIN
     WHERE citizen_id IN (
         SELECT c.id
         FROM citizen c
-        JOIN family f ON f.id = c.family_id
+                 JOIN family f ON f.id = c.family_id
         WHERE f.family_name LIKE 'TEST_DATA_FAMILY_%'
     )
-    OR company_id IN (
+       OR company_id IN (
         SELECT id FROM company
         WHERE name LIKE 'TEST_DATA_COMPANY_%'
     )
-    OR institution_id IN (
+       OR institution_id IN (
         SELECT id FROM institution
         WHERE name LIKE 'TEST_DATA_INSTITUTION_%'
     );
@@ -621,10 +621,10 @@ BEGIN
     WHERE citizen_id IN (
         SELECT c.id
         FROM citizen c
-        JOIN family f ON f.id = c.family_id
+                 JOIN family f ON f.id = c.family_id
         WHERE f.family_name LIKE 'TEST_DATA_FAMILY_%'
     )
-    OR institution_id IN (
+       OR institution_id IN (
         SELECT id FROM institution
         WHERE name LIKE 'TEST_DATA_INSTITUTION_%'
     );
@@ -668,7 +668,7 @@ ALTER FUNCTION public.remove_test_data() OWNER TO postgres;
 
 CREATE FUNCTION public.total_citizen_salary(p_citizen_id bigint) RETURNS numeric
     LANGUAGE plpgsql
-    AS $$
+AS $$
 DECLARE
     total NUMERIC;
 BEGIN
@@ -691,7 +691,7 @@ ALTER FUNCTION public.total_citizen_salary(p_citizen_id bigint) OWNER TO postgre
 
 CREATE FUNCTION public.trg_fn_citizen_death_status() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     IF NEW.death_date IS NOT NULL THEN
         NEW.status := 'deceased';
@@ -715,10 +715,10 @@ ALTER FUNCTION public.trg_fn_citizen_death_status() OWNER TO postgres;
 
 CREATE FUNCTION public.trg_fn_citizen_post_death_cleanup() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     IF NEW.death_date IS NOT NULL
-       AND OLD.death_date IS DISTINCT FROM NEW.death_date THEN
+        AND OLD.death_date IS DISTINCT FROM NEW.death_date THEN
 
         -- End active jobs on the death date.
         UPDATE job
@@ -753,7 +753,7 @@ ALTER FUNCTION public.trg_fn_citizen_post_death_cleanup() OWNER TO postgres;
 
 CREATE FUNCTION public.trg_fn_company_dissolved_status() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     IF NEW.dissolved_date IS NOT NULL THEN
         NEW.status := 'dissolved';
@@ -773,7 +773,7 @@ ALTER FUNCTION public.trg_fn_company_dissolved_status() OWNER TO postgres;
 
 CREATE FUNCTION public.trg_fn_enforce_housing_capacity() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$
+AS $$
 DECLARE
     v_occupants INTEGER;
     v_capacity INTEGER;
@@ -818,7 +818,7 @@ ALTER FUNCTION public.trg_fn_enforce_housing_capacity() OWNER TO postgres;
 
 CREATE FUNCTION public.trg_fn_validate_job_dates() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$
+AS $$
 DECLARE
     v_birth_date DATE;
     v_death_date DATE;
@@ -834,19 +834,19 @@ BEGIN
     END IF;
 
     IF v_birth_date IS NOT NULL
-       AND NEW.start_date < v_birth_date THEN
+        AND NEW.start_date < v_birth_date THEN
         RAISE EXCEPTION
             'Job start date cannot be before the citizen birth date.';
     END IF;
 
     IF v_death_date IS NOT NULL
-       AND NEW.start_date > v_death_date THEN
+        AND NEW.start_date > v_death_date THEN
         RAISE EXCEPTION
             'A job cannot start after the citizen death date.';
     END IF;
 
     IF NEW.end_date IS NOT NULL
-       AND NEW.end_date < NEW.start_date THEN
+        AND NEW.end_date < NEW.start_date THEN
         RAISE EXCEPTION
             'Job end date cannot be earlier than its start date.';
     END IF;
@@ -865,7 +865,7 @@ ALTER FUNCTION public.trg_fn_validate_job_dates() OWNER TO postgres;
 
 CREATE FUNCTION public.update_citizen_status() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     IF NEW.death_date IS NOT NULL THEN
         NEW.status := 'deceased';
@@ -887,10 +887,10 @@ ALTER FUNCTION public.update_citizen_status() OWNER TO postgres;
 
 CREATE FUNCTION public.update_job_status() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$
+AS $$
 BEGIN
     IF NEW.end_date IS NOT NULL THEN
-        NEW.status := 'ended';
+        NEW.status := 'inactive';
     ELSE
         NEW.status := 'active';
     END IF;
@@ -912,18 +912,18 @@ SET default_table_access_method = heap;
 --
 
 CREATE TABLE public.citizen (
-    id bigint NOT NULL,
-    first_name character varying(100) NOT NULL,
-    last_name character varying(100) NOT NULL,
-    birth_date date NOT NULL,
-    death_date date,
-    status character varying(10) DEFAULT 'alive'::character varying NOT NULL,
-    gender character varying(50),
-    family_id bigint NOT NULL,
-    housing_id bigint,
-    CONSTRAINT chk_citizen_dates CHECK (((birth_date <= CURRENT_DATE) AND ((death_date IS NULL) OR (death_date >= birth_date)))),
-    CONSTRAINT chk_citizen_status CHECK (((status)::text = ANY ((ARRAY['alive'::character varying, 'dead'::character varying])::text[]))),
-    CONSTRAINT chk_citizen_status_dates CHECK (((((status)::text = 'alive'::text) AND (death_date IS NULL)) OR (((status)::text = 'dead'::text) AND (death_date IS NOT NULL))))
+                                id bigint NOT NULL,
+                                first_name character varying(100) NOT NULL,
+                                last_name character varying(100) NOT NULL,
+                                birth_date date NOT NULL,
+                                death_date date,
+                                status character varying(10) DEFAULT 'alive'::character varying NOT NULL,
+                                gender character varying(50),
+                                family_id bigint NOT NULL,
+                                housing_id bigint,
+                                CONSTRAINT chk_citizen_dates CHECK (((birth_date <= CURRENT_DATE) AND ((death_date IS NULL) OR (death_date >= birth_date)))),
+                                CONSTRAINT chk_citizen_status CHECK (((status)::text = ANY ((ARRAY['alive'::character varying, 'deceased'::character varying])::text[]))),
+                                CONSTRAINT chk_citizen_status_dates CHECK (((((status)::text = 'alive'::text) AND (death_date IS NULL)) OR (((status)::text = 'deceased'::text) AND (death_date IS NOT NULL))))
 );
 
 
@@ -935,8 +935,8 @@ ALTER TABLE public.citizen OWNER TO postgres;
 --
 
 CREATE TABLE public.family (
-    id bigint NOT NULL,
-    family_name character varying(150) NOT NULL
+                               id bigint NOT NULL,
+                               family_name character varying(150) NOT NULL
 );
 
 
@@ -948,15 +948,15 @@ ALTER TABLE public.family OWNER TO postgres;
 --
 
 CREATE TABLE public.housing (
-    id bigint NOT NULL,
-    location_id bigint NOT NULL,
-    housing_type character varying(30) NOT NULL,
-    capacity integer NOT NULL,
-    number_of_levels integer,
-    number_of_flats integer,
-    height double precision,
-    CONSTRAINT chk_housing_capacity CHECK ((capacity > 0)),
-    CONSTRAINT chk_housing_type CHECK (((housing_type)::text = ANY ((ARRAY['house'::character varying, 'apartment'::character varying])::text[])))
+                                id bigint NOT NULL,
+                                location_id bigint NOT NULL,
+                                housing_type character varying(30) NOT NULL,
+                                capacity integer NOT NULL,
+                                number_of_levels integer,
+                                number_of_flats integer,
+                                height double precision,
+                                CONSTRAINT chk_housing_capacity CHECK ((capacity > 0)),
+                                CONSTRAINT chk_housing_type CHECK (((housing_type)::text = ANY ((ARRAY['house'::character varying, 'apartment'::character varying])::text[])))
 );
 
 
@@ -968,13 +968,13 @@ ALTER TABLE public.housing OWNER TO postgres;
 --
 
 CREATE TABLE public.location (
-    id bigint NOT NULL,
-    name character varying(150) NOT NULL,
-    street_address character varying(255),
-    latitude double precision,
-    longitude double precision,
-    osm_id bigint,
-    osm_type character varying(255)
+                                 id bigint NOT NULL,
+                                 name character varying(150) NOT NULL,
+                                 street_address character varying(255),
+                                 latitude double precision,
+                                 longitude double precision,
+                                 osm_id bigint,
+                                 osm_type character varying(255)
 );
 
 
@@ -986,26 +986,26 @@ ALTER TABLE public.location OWNER TO postgres;
 --
 
 CREATE VIEW public.citizen_details AS
- SELECT c.id AS citizen_id,
-    c.first_name,
-    c.last_name,
-    c.birth_date,
-        CASE
-            WHEN (c.birth_date IS NOT NULL) THEN (EXTRACT(year FROM age((COALESCE(c.death_date, CURRENT_DATE))::timestamp with time zone, (c.birth_date)::timestamp with time zone)))::integer
-            ELSE NULL::integer
-        END AS age,
-    c.gender,
-    c.status,
-    c.death_date,
-    f.family_name,
-    h.id AS housing_id,
-    h.housing_type,
-    h.capacity AS housing_capacity,
-    l.name AS housing_location
-   FROM (((public.citizen c
-     LEFT JOIN public.family f ON ((c.family_id = f.id)))
-     LEFT JOIN public.housing h ON ((c.housing_id = h.id)))
-     LEFT JOIN public.location l ON ((h.location_id = l.id)));
+SELECT c.id AS citizen_id,
+       c.first_name,
+       c.last_name,
+       c.birth_date,
+       CASE
+           WHEN (c.birth_date IS NOT NULL) THEN (EXTRACT(year FROM age((COALESCE(c.death_date, CURRENT_DATE))::timestamp with time zone, (c.birth_date)::timestamp with time zone)))::integer
+           ELSE NULL::integer
+           END AS age,
+       c.gender,
+       c.status,
+       c.death_date,
+       f.family_name,
+       h.id AS housing_id,
+       h.housing_type,
+       h.capacity AS housing_capacity,
+       l.name AS housing_location
+FROM (((public.citizen c
+    LEFT JOIN public.family f ON ((c.family_id = f.id)))
+    LEFT JOIN public.housing h ON ((c.housing_id = h.id)))
+    LEFT JOIN public.location l ON ((h.location_id = l.id)));
 
 
 ALTER VIEW public.citizen_details OWNER TO postgres;
@@ -1022,7 +1022,7 @@ ALTER TABLE public.citizen ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     NO MINVALUE
     NO MAXVALUE
     CACHE 1
-);
+    );
 
 
 --
@@ -1031,15 +1031,15 @@ ALTER TABLE public.citizen ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 --
 
 CREATE TABLE public.citizen_relationship (
-    id bigint NOT NULL,
-    citizen_id_1 bigint NOT NULL,
-    citizen_id_2 bigint NOT NULL,
-    relationship_type character varying(20) NOT NULL,
-    start_date date NOT NULL,
-    end_date date,
-    CONSTRAINT chk_different_citizens CHECK ((citizen_id_1 <> citizen_id_2)),
-    CONSTRAINT chk_relationship_dates CHECK (((end_date IS NULL) OR (end_date >= start_date))),
-    CONSTRAINT chk_relationship_type CHECK (((relationship_type)::text = ANY ((ARRAY['parent_child'::character varying, 'marriage'::character varying])::text[])))
+                                             id bigint NOT NULL,
+                                             citizen_id_1 bigint NOT NULL,
+                                             citizen_id_2 bigint NOT NULL,
+                                             relationship_type character varying(20) NOT NULL,
+                                             start_date date NOT NULL,
+                                             end_date date,
+                                             CONSTRAINT chk_different_citizens CHECK ((citizen_id_1 <> citizen_id_2)),
+                                             CONSTRAINT chk_relationship_dates CHECK (((end_date IS NULL) OR (end_date >= start_date))),
+                                             CONSTRAINT chk_relationship_type CHECK (((relationship_type)::text = ANY ((ARRAY['parent_child'::character varying, 'marriage'::character varying])::text[])))
 );
 
 
@@ -1057,7 +1057,7 @@ ALTER TABLE public.citizen_relationship ALTER COLUMN id ADD GENERATED ALWAYS AS 
     NO MINVALUE
     NO MAXVALUE
     CACHE 1
-);
+    );
 
 
 --
@@ -1066,22 +1066,22 @@ ALTER TABLE public.citizen_relationship ALTER COLUMN id ADD GENERATED ALWAYS AS 
 --
 
 CREATE TABLE public.company (
-    id bigint NOT NULL,
-    location_id bigint NOT NULL,
-    name character varying(200) NOT NULL,
-    founded_date date NOT NULL,
-    dissolved_date date,
-    status character varying(20) DEFAULT 'active'::character varying NOT NULL,
-    cvr_number character varying(255),
-    production_unit_number character varying(255),
-    website character varying(255),
-    phone character varying(255),
-    email character varying(255),
-    category character varying(255),
-    opening_hours character varying(255),
-    CONSTRAINT chk_company_dates CHECK (((dissolved_date IS NULL) OR (dissolved_date >= founded_date))),
-    CONSTRAINT chk_company_status CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'dissolved'::character varying])::text[]))),
-    CONSTRAINT chk_company_status_dates CHECK (((((status)::text = 'active'::text) AND (dissolved_date IS NULL)) OR (((status)::text = 'dissolved'::text) AND (dissolved_date IS NOT NULL))))
+                                id bigint NOT NULL,
+                                location_id bigint NOT NULL,
+                                name character varying(200) NOT NULL,
+                                founded_date date NOT NULL,
+                                dissolved_date date,
+                                status character varying(20) DEFAULT 'active'::character varying NOT NULL,
+                                cvr_number character varying(255),
+                                production_unit_number character varying(255),
+                                website character varying(255),
+                                phone character varying(255),
+                                email character varying(255),
+                                category character varying(255),
+                                opening_hours character varying(255),
+                                CONSTRAINT chk_company_dates CHECK (((dissolved_date IS NULL) OR (dissolved_date >= founded_date))),
+                                CONSTRAINT chk_company_status CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'dissolved'::character varying])::text[]))),
+                                CONSTRAINT chk_company_status_dates CHECK (((((status)::text = 'active'::text) AND (dissolved_date IS NULL)) OR (((status)::text = 'dissolved'::text) AND (dissolved_date IS NOT NULL))))
 );
 
 
@@ -1099,7 +1099,7 @@ ALTER TABLE public.company ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     NO MINVALUE
     NO MAXVALUE
     CACHE 1
-);
+    );
 
 
 --
@@ -1108,12 +1108,12 @@ ALTER TABLE public.company ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 --
 
 CREATE TABLE public.education_record (
-    id bigint NOT NULL,
-    citizen_id bigint NOT NULL,
-    institution_id bigint NOT NULL,
-    start_date date NOT NULL,
-    end_date date,
-    CONSTRAINT chk_education_dates CHECK (((end_date IS NULL) OR (end_date >= start_date)))
+                                         id bigint NOT NULL,
+                                         citizen_id bigint NOT NULL,
+                                         institution_id bigint NOT NULL,
+                                         start_date date NOT NULL,
+                                         end_date date,
+                                         CONSTRAINT chk_education_dates CHECK (((end_date IS NULL) OR (end_date >= start_date)))
 );
 
 
@@ -1131,7 +1131,7 @@ ALTER TABLE public.education_record ALTER COLUMN id ADD GENERATED ALWAYS AS IDEN
     NO MINVALUE
     NO MAXVALUE
     CACHE 1
-);
+    );
 
 
 --
@@ -1146,7 +1146,7 @@ ALTER TABLE public.family ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     NO MINVALUE
     NO MAXVALUE
     CACHE 1
-);
+    );
 
 
 --
@@ -1161,7 +1161,7 @@ ALTER TABLE public.housing ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     NO MINVALUE
     NO MAXVALUE
     CACHE 1
-);
+    );
 
 
 --
@@ -1170,14 +1170,14 @@ ALTER TABLE public.housing ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 --
 
 CREATE TABLE public.institution (
-    id bigint NOT NULL,
-    location_id bigint NOT NULL,
-    name character varying(200) NOT NULL,
-    type character varying(30) NOT NULL,
-    website character varying(255),
-    phone character varying(255),
-    email character varying(255),
-    CONSTRAINT chk_institution_type CHECK (((type)::text = ANY ((ARRAY['high_school'::character varying, 'college'::character varying, 'hospital'::character varying])::text[])))
+                                    id bigint NOT NULL,
+                                    location_id bigint NOT NULL,
+                                    name character varying(200) NOT NULL,
+                                    type character varying(30) NOT NULL,
+                                    website character varying(255),
+                                    phone character varying(255),
+                                    email character varying(255),
+                                    CONSTRAINT chk_institution_type CHECK (((type)::text = ANY ((ARRAY['high_school'::character varying, 'college'::character varying, 'hospital'::character varying])::text[])))
 );
 
 
