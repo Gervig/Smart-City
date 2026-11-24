@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.DynamicUpdate;
 
 @Entity
@@ -17,7 +19,9 @@ public class Housing {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "location_id", nullable = true)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private Location location;
 
     private String housingType;
