@@ -1,0 +1,26 @@
+$kind: http-request
+name: "Total salary - Non-existing citizen ID (200)"
+url: "{{baseUrl}}/citizens/999999/total-salary"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: 'pm.request.headers.add({key: "Authorization", value: "Bearer {{adminToken}}"});'
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Response is numeric", function () {
+          pm.expect(pm.response.json()).to.be.a("number");
+      });
+      pm.test("Non-existing citizen has zero salary", function () {
+          pm.expect(pm.response.json()).to.equal(0);
+      });
+      pm.test("Response time is below 1500ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+    language: text/javascript
+order: 12000
