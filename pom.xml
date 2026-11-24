@@ -23,6 +23,9 @@
         <hamcrest.version>3.0</hamcrest.version>
         <rest-assured.version>5.5.0</rest-assured.version>
         <testcontainers.version>1.21.4</testcontainers.version>
+        <!-- Document and graph solutions; same driver versions as the migrator (Neo4j 6.x needs Java 21) -->
+        <mongodb.version>5.15.0</mongodb.version>
+        <neo4j.version>5.28.15</neo4j.version>
         <jackson.version>2.16.0</jackson.version>
         <token.security.version>1.0.4</token.security.version>
         <mapstruct.version>1.6.3</mapstruct.version>
@@ -56,6 +59,16 @@
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-core</artifactId>
             <version>${hibernate-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+            <version>${mongodb.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j.driver</groupId>
+            <artifactId>neo4j-java-driver</artifactId>
+            <version>${neo4j.version}</version>
         </dependency>
         <dependency>
             <groupId>io.javalin</groupId>
@@ -135,6 +148,18 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mongodb</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>neo4j</artifactId>
             <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>

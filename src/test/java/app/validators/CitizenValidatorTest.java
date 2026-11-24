@@ -39,12 +39,12 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("accepts a dead citizen with a valid death date and no housing")
+    @DisplayName("accepts a deceased citizen with a valid death date and no housing")
     void validateDeadCitizen()
     {
         // Arrange
         LocalDate date = LocalDate.now().minusYears(20);
-        CitizenRequestDTO request = request("Alex", "Smith", date, date, "dead", null);
+        CitizenRequestDTO request = request("Alex", "Smith", date, date, "deceased", null);
 
         // Act / Assert
         assertDoesNotThrow(() -> CitizenValidator.validate(request));
@@ -144,7 +144,7 @@ class CitizenValidatorTest
     {
         // Arrange
         LocalDate birthDate = LocalDate.now().minusYears(20);
-        CitizenRequestDTO request = request("Alex", "Smith", birthDate, date, "dead", null);
+        CitizenRequestDTO request = request("Alex", "Smith", birthDate, date, "deceased", null);
 
         // Act
         if (invalid)
@@ -160,14 +160,14 @@ class CitizenValidatorTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"alive", "dead"})
+    @ValueSource(strings = {"alive", "deceased"})
     @DisplayName("accepts allowed status values when dates agree")
     void validateStatus(String status)
     {
         // Arrange
         LocalDate date = LocalDate.now().minusYears(20);
         CitizenRequestDTO request = request("Alex", "Smith", date,
-                "dead".equals(status) ? date : null, status, null);
+                "deceased".equals(status) ? date : null, status, null);
 
         // Act / Assert
         assertDoesNotThrow(() -> CitizenValidator.validate(request));
@@ -207,12 +207,12 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("requires a dead citizen to have a death date")
+    @DisplayName("requires a deceased citizen to have a death date")
     void validateDeadDeathDate()
     {
         // Arrange
         CitizenRequestDTO request = request("Alex", "Smith", LocalDate.now().minusYears(1),
-                null, "dead", null);
+                null, "deceased", null);
 
         // Act
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
@@ -223,12 +223,12 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("rejects housing for a dead citizen")
+    @DisplayName("rejects housing for a deceased citizen")
     void validateDeadHousing()
     {
         // Arrange
         LocalDate date = LocalDate.now().minusYears(20);
-        CitizenRequestDTO request = request("Alex", "Smith", date, date, "dead", 1L);
+        CitizenRequestDTO request = request("Alex", "Smith", date, date, "deceased", 1L);
 
         // Act
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
@@ -244,7 +244,7 @@ class CitizenValidatorTest
     {
         // Arrange
         LocalDate birthDate = LocalDate.now().minusYears(20);
-        CitizenRequestDTO request = request("Alex", "Smith", birthDate, birthDate.plusDays(1), "dead", null);
+        CitizenRequestDTO request = request("Alex", "Smith", birthDate, birthDate.plusDays(1), "deceased", null);
 
         // Act / Assert
         assertDoesNotThrow(() -> CitizenValidator.validate(request));

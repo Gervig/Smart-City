@@ -4,7 +4,7 @@ CREATE TABLE "Citizen" (
   "last_name" <type>,
   "birth_date" <type>,
   "death_date (NULLABLE)" <type>,
-  "status (alive / dead)" <type>,
+  "status (alive / deceased)" <type>,
   "gender" <type>,
   "age" <type>,
   "family_id (FK)" <type>,
@@ -13,7 +13,7 @@ CREATE TABLE "Citizen" (
 
 CREATE INDEX "Long" ON  "Citizen" ("id (PK)");
 
-CREATE INDEX "String" ON  "Citizen" ("first_name", "last_name", "status (alive / dead)", "gender");
+CREATE INDEX "String" ON  "Citizen" ("first_name", "last_name", "status (alive / deceased)", "gender");
 
 CREATE INDEX "date" ON  "Citizen" ("birth_date", "death_date (NULLABLE)");
 
@@ -137,10 +137,9 @@ CREATE TABLE "Education_Record" (
       REFERENCES "Institution"("type (High School, College, Hospital)"),
   CONSTRAINT "FK_Education_Record_institution_id (FK)"
     FOREIGN KEY ("institution_id (FK)")
-      REFERENCES "Citizen"("status (alive / dead)")
+      REFERENCES "Citizen"("status (alive / deceased)")
 );
 
 CREATE INDEX "Long" ON  "Education_Record" ("id(Pk)", "citizen_id(FK)", "institution_id (FK)");
 
 CREATE INDEX "Date" ON  "Education_Record" ("start_date", "end_date (NULLABLE)");
-

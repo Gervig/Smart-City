@@ -135,7 +135,7 @@ class SeedServiceWithDatabaseTest
         for (Citizen citizen : citizenDAO.findAll())
         {
             assertNotNull(citizen.getFamily());
-            if ("dead".equals(citizen.getStatus()))
+            if ("deceased".equals(citizen.getStatus()))
             {
                 assertNotNull(citizen.getDeathDate());
                 assertFalse(citizen.getDeathDate().isBefore(citizen.getBirthDate()));

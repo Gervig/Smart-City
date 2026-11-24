@@ -94,7 +94,7 @@ const schemas = {
       lastName: text,
       birthDate: date,
       deathDate: date,
-      status: { enum: ['alive', 'dead'] },
+      status: { enum: ['alive', 'deceased'] },
       gender: text,
       family: { bsonType: 'object', required: ['id', 'familyName'], properties: { id: id, familyName: text } },
       housingId: id,
@@ -135,12 +135,14 @@ const schemas = {
         bsonType: 'array',
         items: {
           bsonType: 'object',
-          required: ['id', 'type', 'citizenId', 'startDate'],
+          required: ['id', 'type', 'citizenId', 'direction', 'startDate'],
           properties: {
             id: id,
             type: { enum: ['parent_child', 'marriage'] },
+            // the other citizen; "outgoing" = this citizen is citizen_id_1, "incoming" = citizen_id_2
             citizenId: id,
             name: text,
+            direction: { enum: ['outgoing', 'incoming'] },
             startDate: date,
             endDate: date
           }
@@ -166,12 +168,18 @@ for (const [name, schema] of Object.entries(schemas)) {
   }
 }
 
+// The id counters of the CRUD application ({_id: entity, seq: last id}); MongoDB has no sequences. Created here, so
+// the application's database user does not need the right to create collections.
+if (!existing.includes('counters')) {
+  db.createCollection('counters');
+}
+
 // Creates the index; an index with the same keys under another name (for example made earlier without a name) is
 // replaced, because MongoDB does not allow the same keys twice
 function ensureIndex(collection, keys, name) {
   db.getCollection(collection).getIndexes()
-    .filter(index => index.name !== name && JSON.stringify(index.key) === JSON.stringify(keys))
-    .forEach(index => db.getCollection(collection).dropIndex(index.name));
+      .filter(index => index.name !== name && JSON.stringify(index.key) === JSON.stringify(keys))
+      .forEach(index => db.getCollection(collection).dropIndex(index.name));
   db.getCollection(collection).createIndex(keys, { name: name });
 }
 

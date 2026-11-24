@@ -817,25 +817,59 @@ The three models represent different levels of detail of the same Smart City dom
 
 ## Migration to MongoDB and Neo4j
 
-<!-- TODO(migrator): fill in this section when the migrator documentation is added. Suggested structure:
-1. Overview: what the migrator does (one-time migration of the PostgreSQL data into MongoDB and Neo4j), and a flow diagram.
-2. Structure and data are separate: table of NoSQL/mongodb/01_collections.js and NoSQL/neo4j/01_constraints.cypher.
-3. How the migrator works: read, map, write, report.
-4. MongoDB design: collections, embedded versus referenced.
-5. Neo4j design: nodes and relationships.
-6. Run it: Docker, NoSQL/setup.ps1, java -jar target/migrator.jar, settings, exit codes.
-7. Migrator tests: mvn test and mvn verify.
-See migrator/README.md for the source material. -->
+PostgreSQL is the source system. MongoDB and Neo4j get the same data once, through the migrator, and then serve the same API under their own prefix. Details of the designs are in [migrator/README.md](migrator/README.md).
 
-_Overview:_ to be added
+### Overview
 
-_Document design (MongoDB):_ to be added
+| | PostgreSQL | MongoDB | Neo4j |
+|---|---|---|---|
+| Structure | `SQL/schema/database_schema.sql` | `NoSQL/mongodb/01_collections.js`: 7 collections with `$jsonSchema` validators, 5 indexes | `NoSQL/neo4j/01_constraints.cypher`: 9 uniqueness constraints, 6 indexes |
+| Data | seeded (`populate_test_data()`) | the migrator | the migrator |
+| API | `/citizens`, `/api/auth/login` | `/mongodb/citizens`, `/mongodb/api/auth/login` | `/neo4j/citizens`, `/neo4j/api/auth/login` |
+| Dump / load | | `NoSQL/mongodb/dump/smart_city.archive.gz` | `NoSQL/neo4j/dump/neo4j.dump` |
+| Users and privileges | `SQL/users/08_users.sql` | `NoSQL/mongodb/02_users.js`: 2 custom roles + view `citizens_restricted` | `NoSQL/neo4j/02_users.cypher` (users); `03_privileges_enterprise.cypher` (roles, Enterprise/AuraDB only) |
 
-_Graph design (Neo4j):_ to be added
+All three have the same four database users: `smartcity_app` (the backend: read and write data, no structure changes), `smartcity_admin` (everything), `smartcity_readonly` (read everything) and `smartcity_restricted` (read without salaries and login users). In MongoDB the restricted user reads citizens through the view `citizens_restricted`, which leaves out `jobs.salary`, like the column-level grant in PostgreSQL. Neo4j Community has users but no roles (`GRANT` gives "Unsupported administration command"), so there every user has full rights and the application's role rules do the restricting; on Enterprise or AuraDB `03_privileges_enterprise.cypher` adds the roles, including `DENY READ {salary}` on `WORKS_AT`. The local MongoDB container runs without authentication, so its users only take effect with authentication on (always on MongoDB Atlas); `NoSqlDatabaseUsersTest` checks every user's rights on a MongoDB with authentication.
 
-_Run the migration:_ to be added
+The migrator (`migrator/`, its own `pom.xml`) reads every table in one read-only transaction as `smartcity_readonly`, maps the rows to documents and to a graph, writes both, and compares 25 counts. It also sets the id counters the CRUD application uses (MongoDB collection `counters`, Neo4j `:Sequence` nodes), so new ids continue after the migrated ones.
 
-_Migrator tests:_ to be added
+### Document design (MongoDB)
+
+Citizens are the aggregate: family (id + name), jobs (with salary and employer name), education and relationships are embedded; the housing is referenced (`housingId`). Housings, companies and institutions embed their location. A relationship is embedded in both citizens, with `direction` (`outgoing` for citizen 1, `incoming` for citizen 2).
+
+### Graph design (Neo4j)
+
+`Citizen`, `Family`, `Housing`, `Location`, `Company`, `Institution`, `User` and `Role` are nodes. Foreign keys become `MEMBER_OF`, `LIVES_IN`, `LOCATED_AT` and `HAS_ROLE`; the join tables become relationships with properties: `WORKS_AT {title, salary, ...}`, `STUDIED_AT`, `RELATED_TO {type, ...}`.
+
+### Run the migration
+
+With the Docker databases running and `SQL/users/08_users.sql` loaded:
+
+```text
+powershell -ExecutionPolicy Bypass -File NoSQL\setup.ps1
+cd migrator
+mvn package
+java -jar target/migrator.jar
+```
+
+Exit code 0 when every count matches. Instead of migrating, the committed dumps can be loaded with `powershell -ExecutionPolicy Bypass -File NoSQL\load.ps1`; `NoSQL\dump.ps1` writes new ones (it stops the Neo4j container for a few seconds, because Neo4j Community can only dump a stopped database).
+
+### The MongoDB and Neo4j API
+
+All nine resources exist under `/mongodb` and `/neo4j` with the same paths, DTOs, validation, paging (`page`, `size`), filters, sorting (`sort=field,direction`) and role rules as PostgreSQL, including the admin-only salary. Each solution has its own login users: `POST /mongodb/api/auth/login` checks the MongoDB `users` collection, `POST /neo4j/api/auth/login` the `User`/`Role` nodes; the migrated users keep their passwords (`admin` / your `ADMIN_PASSWORD`, `User1` / `Password123`).
+
+The controllers only know the `CrudService` interface, so only the data layer differs (`app/mongo`, `app/neo4j`). PostgreSQL's foreign keys and triggers are done in the services: 404 for an unknown reference, 409 when a delete would break one (`ON DELETE RESTRICT`), a deleted housing leaves its residents without one (`SET NULL`), housing capacity, job dates, and the death cleanup of `trg_citizen_post_death_cleanup`. MongoDB also updates its copies when a name changes (a renamed company is renamed in every job). Neo4j writes in one transaction; a standalone MongoDB has no multi-document transactions, so a write that moves an embedded row is two atomic single-document writes.
+
+Connection settings: `MONGO_URI`, `MONGO_DB`, `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` (environment variable, else `config.properties`, else the Docker defaults). When a database cannot be reached its routes answer 503.
+
+### Migrator tests
+
+```text
+cd migrator
+mvn verify   # 15 unit tests + 11 end-to-end tests (PostgreSQL, MongoDB and Neo4j in Docker)
+```
+
+The main project's `NoSqlSolutionsApiTest` runs 11 scenarios (login, roles, CRUD, paging, filters, business rules, deletes, death cleanup) against both `/mongodb` and `/neo4j` with Testcontainers.
 
 ## Continuous integration and delivery
 

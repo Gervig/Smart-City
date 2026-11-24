@@ -21,7 +21,7 @@ public final class CitizenValidator {
 
         Check.requireNotNull("birthDate", request.birthDate());
         Check.requireNotAfterToday("birthDate", request.birthDate());
-        Check.requireNotBefore("deathDate", request.deathDate(), "birthDate", request.birthDate());
+        Check.requireNotBefore("dea1thDate", request.deathDate(), "birthDate", request.birthDate());
 
         Check.requireMaxLength("status", request.status(), MAX_STATUS_LENGTH);
         Check.requireNoControlChars("status", request.status());
@@ -30,10 +30,10 @@ public final class CitizenValidator {
         if ("alive".equals(request.status()) && request.deathDate() != null) {
             throw new IllegalArgumentException("deathDate must be null when status is alive");
         }
-        if ("dead".equals(request.status()) && request.deathDate() == null) {
+        if ("deceased".equals(request.status()) && request.deathDate() == null) {
             throw new IllegalArgumentException("deathDate is required when status is deceased");
         }
-        if ("dead".equals(request.status()) && request.housingId() != null) {
+        if ("deceased".equals(request.status()) && request.housingId() != null) {
             throw new IllegalArgumentException("housingId must be null for a deceased citizen");
         }
     }
