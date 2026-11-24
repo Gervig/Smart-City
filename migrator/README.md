@@ -8,7 +8,7 @@ compares the counts.
 
 | | PostgreSQL | MongoDB | Neo4j |
 |---|---|---|---|
-| Structure | `SQL/schema/database_schema.sql` | `NoSQL/mongodb/01_collections.js`: 7 collections with `$jsonSchema` validators, 5 indexes | `NoSQL/neo4j/01_constraints.cypher`: 8 uniqueness constraints, 3 indexes |
+| Structure | `SQL/schema/database_schema.sql` | `NoSQL/mongodb/01_collections.js`: 7 collections with `$jsonSchema` validators, 5 indexes | `NoSQL/neo4j/01_constraints.cypher`: 9 uniqueness constraints, 6 indexes |
 | Data | the backend | **this migrator** | **this migrator** |
 
 `NoSQL/setup.ps1` runs both structure scripts against the Docker containers. The migrator only writes data: it
@@ -35,13 +35,17 @@ checks that the structure exists and stops with a message that names the missing
    text.
 4. **Report** (`MigrationReport`): expected counts (from the SQL rows) against actual counts (in MongoDB and Neo4j).
 
+The migrator also sets the id counters of the CRUD application (`source/Sequences`): MongoDB and Neo4j have no
+sequences, so the application counts itself (collection `counters`, `:Sequence` nodes), and each counter starts at the
+highest migrated id.
+
 ## Document design (MongoDB, database `smart_city`)
 
 Rule: embed what is read together with its owner and belongs to it alone; reference what is shared.
 
 | Collection | Document | Embedded | Referenced |
 |---|---|---|---|
-| `citizens` | one citizen | `family {id, familyName}`, `jobs[]` (with salary and `employer {type, id, name}`), `education[]` (with `institution {id, name, type}`), `relationships[]` (the other citizen's id and name) | `housingId`: several citizens share one housing |
+| `citizens` | one citizen | `family {id, familyName}`, `jobs[]` (with salary and `employer {type, id, name}`), `education[]` (with `institution {id, name, type}`), `relationships[]` (the other citizen's id and name, and `direction`: `outgoing` for citizen 1, `incoming` for citizen 2) | `housingId`: several citizens share one housing |
 | `housings` | one housing | `location` | `residentIds[]` |
 | `companies` | one company | `location` | |
 | `institutions` | one institution | `location` | |

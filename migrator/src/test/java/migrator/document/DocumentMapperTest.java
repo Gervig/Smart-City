@@ -57,6 +57,7 @@ class DocumentMapperTest
         assertEquals("marriage", relationship.get("type"));
         assertEquals(2L, relationship.get("citizenId"));
         assertEquals("Bo Jensen", relationship.get("name"));
+        assertEquals("outgoing", relationship.get("direction"));
     }
 
     @Test
@@ -71,6 +72,7 @@ class DocumentMapperTest
         // Assert
         assertEquals(1L, fromBo.get("citizenId"));
         assertEquals("Anna Jensen", fromBo.get("name"));
+        assertEquals("incoming", fromBo.get("direction"));
     }
 
     @Test
