@@ -949,7 +949,7 @@ ALTER TABLE public.family OWNER TO postgres;
 
 CREATE TABLE public.housing (
                                 id bigint NOT NULL,
-                                location_id bigint NOT NULL,
+                                location_id bigint,
                                 housing_type character varying(30) NOT NULL,
                                 capacity integer NOT NULL,
                                 number_of_levels integer,
@@ -1641,7 +1641,7 @@ ALTER TABLE ONLY public.education_record
 --
 
 ALTER TABLE ONLY public.housing
-    ADD CONSTRAINT fk_housing_location FOREIGN KEY (location_id) REFERENCES public.location(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT fk_housing_location FOREIGN KEY (location_id) REFERENCES public.location(id) ON DELETE SET NULL;
 
 
 --
