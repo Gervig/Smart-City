@@ -4,6 +4,7 @@ import migrator.document.DocumentMapper;
 import migrator.document.MongoWriter;
 import migrator.graph.GraphMapper;
 import migrator.graph.Neo4jWriter;
+import migrator.source.Sequences;
 import migrator.source.Snapshot;
 import migrator.source.SqlReader;
 import org.bson.Document;
@@ -47,14 +48,18 @@ public final class Migrator
         Snapshot snapshot = new SqlReader(config.postgresUrl(), config.postgresUser(), config.postgresPassword()).read();
         System.out.println("Read " + snapshot.rowCount() + " rows");
 
+        // The id counters of the CRUD application continue after the highest migrated ids
+        Map<String, Long> sequences = Sequences.of(snapshot);
+
         Map<String, List<Document>> documents = DocumentMapper.map(snapshot);
         System.out.println("Writing MongoDB " + config.mongoUri() + "/" + config.mongoDatabase());
-        Map<String, Long> mongoCounts = new MongoWriter(config.mongoUri(), config.mongoDatabase()).write(documents);
+        Map<String, Long> mongoCounts = new MongoWriter(config.mongoUri(), config.mongoDatabase())
+                .write(documents, sequences);
 
         List<GraphMapper.Step> steps = GraphMapper.map(snapshot);
         System.out.println("Writing Neo4j " + config.neo4jUri());
         Map<String, Long> neo4jCounts = new Neo4jWriter(config.neo4jUri(), config.neo4jUser(), config.neo4jPassword())
-                .write(steps);
+                .write(steps, sequences);
 
         return MigrationReport.of(snapshot, documents, mongoCounts, neo4jCounts);
     }

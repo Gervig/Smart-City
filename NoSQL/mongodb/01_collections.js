@@ -135,12 +135,14 @@ const schemas = {
         bsonType: 'array',
         items: {
           bsonType: 'object',
-          required: ['id', 'type', 'citizenId', 'startDate'],
+          required: ['id', 'type', 'citizenId', 'direction', 'startDate'],
           properties: {
             id: id,
             type: { enum: ['parent_child', 'marriage'] },
+            // the other citizen; "outgoing" = this citizen is citizen_id_1, "incoming" = citizen_id_2
             citizenId: id,
             name: text,
+            direction: { enum: ['outgoing', 'incoming'] },
             startDate: date,
             endDate: date
           }
@@ -164,6 +166,12 @@ for (const [name, schema] of Object.entries(schemas)) {
   } else {
     db.createCollection(name, { validator: validator, validationLevel: 'strict', validationAction: 'error' });
   }
+}
+
+// The id counters of the CRUD application ({_id: entity, seq: last id}); MongoDB has no sequences. Created here, so
+// the application's database user does not need the right to create collections.
+if (!existing.includes('counters')) {
+  db.createCollection('counters');
 }
 
 // Creates the index; an index with the same keys under another name (for example made earlier without a name) is

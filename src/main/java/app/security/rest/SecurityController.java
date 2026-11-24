@@ -3,8 +3,9 @@ package app.security.rest;
 import app.exceptions.ApiException;
 import app.exceptions.NotAuthorizedException;
 import app.exceptions.ValidationException;
+import app.security.daos.PostgresUserStore;
 import app.security.daos.UserDAO;
-import app.security.entities.User;
+import app.security.daos.UserStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -46,7 +47,7 @@ public class SecurityController implements ISecurityController
     private ITokenSecurity tokenSecurity = new TokenSecurity();
     private ObjectMapper objectMapper = new ObjectMapper();
     private static EntityManagerFactory emf;
-    private UserDAO userDAO = UserDAO.getInstance(emf);
+    private final UserStore users; // which database the login users live in
     private final TokenSettings settings; // null: read from config.properties / environment on each use
     private final TokenDenylist denylist;
 
@@ -57,8 +58,18 @@ public class SecurityController implements ISecurityController
 
     public SecurityController(TokenSettings settings, TokenDenylist denylist)
     {
+        this(settings, denylist, new PostgresUserStore(UserDAO.getInstance(emf)));
+    }
+
+    /**
+     * Login and register against the users of one database solution. The tokens, the denylist and the role rules
+     * are the same for all three solutions.
+     */
+    public SecurityController(TokenSettings settings, TokenDenylist denylist, UserStore users)
+    {
         this.settings = settings;
         this.denylist = denylist;
+        this.users = users;
     }
 
     private TokenSettings settings()
@@ -73,12 +84,12 @@ public class SecurityController implements ISecurityController
         {
             UserDTO newUser = readCredentials(ctx);
             CredentialsValidator.validateRegistration(newUser.getUsername(), newUser.getPassword());
-            User createdUser = userDAO.create(new User(newUser.getUsername(), newUser.getPassword())); // 409 if taken
+            Set<String> createdRoles = users.register(newUser.getUsername(), newUser.getPassword()); // 409 if taken
 
             // Only the username and roles go back: the password (hash) never leaves the server
-            ObjectNode body = objectMapper.createObjectNode().put("username", createdUser.getUsername());
+            ObjectNode body = objectMapper.createObjectNode().put("username", newUser.getUsername());
             ArrayNode roles = body.putArray("roles");
-            createdUser.getRoles().forEach(role -> roles.add(role.getName()));
+            createdRoles.forEach(roles::add);
             ctx.status(201).json(body);
         };
     }
@@ -113,7 +124,7 @@ public class SecurityController implements ISecurityController
             CredentialsValidator.validateLogin(user.getUsername(), user.getPassword()); // 400 if one is missing
             try
             {
-                UserDTO verifiedUser = userDAO.getVerifiedUser(user.getUsername(), user.getPassword());
+                UserDTO verifiedUser = users.getVerifiedUser(user.getUsername(), user.getPassword());
                 String token = createToken(verifiedUser);
 
                 ctx.status(200).json(returnObject

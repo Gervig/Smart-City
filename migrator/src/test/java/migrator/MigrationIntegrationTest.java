@@ -102,10 +102,10 @@ class MigrationIntegrationTest
                     .map(index -> index.getString("name")).into(new java.util.ArrayList<>());
 
             // Assert
-            assertEquals(java.util.Set.of("locations", "families", "housings", "companies", "institutions",
-                    "citizens", "users"), collections.stream().map(c -> c.getString("name"))
-                    .collect(java.util.stream.Collectors.toSet()));
-            assertTrue(collections.stream().allMatch(c ->
+            List<String> validated = List.of("locations", "families", "housings", "companies", "institutions",
+                    "citizens", "users");
+            assertTrue(collections.stream().map(c -> c.getString("name")).toList().containsAll(validated));
+            assertTrue(collections.stream().filter(c -> validated.contains(c.getString("name"))).allMatch(c ->
                     c.get("options", Document.class).containsKey("validator")));
             assertTrue(citizenIndexes.containsAll(List.of("citizens_name", "citizens_family", "citizens_housing",
                     "citizens_employer")));
@@ -130,7 +130,7 @@ class MigrationIntegrationTest
     }
 
     @Test
-    @DisplayName("setup script: Neo4j has the 8 uniqueness constraints and the indexes")
+    @DisplayName("setup script: Neo4j has the 9 uniqueness constraints (8 labels + Sequence) and the indexes")
     void neo4jStructure()
     {
         // Arrange
@@ -142,8 +142,30 @@ class MigrationIntegrationTest
             List<String> indexes = session.run("SHOW INDEXES YIELD name RETURN name").list(r -> r.get(0).asString());
 
             // Assert
-            assertEquals(8, constraints.size());
-            assertTrue(indexes.containsAll(List.of("citizen_name", "related_to_type", "works_at_status")));
+            assertEquals(9, constraints.size());
+            assertTrue(indexes.containsAll(List.of("citizen_name", "related_to_type", "works_at_status",
+                    "works_at_id", "studied_at_id", "related_to_id")));
+        }
+    }
+
+    @Test
+    @DisplayName("the id counters for the CRUD application start after the highest migrated ids")
+    void countersStartAfterMigratedIds()
+    {
+        // Arrange
+        try (MongoClient client = MongoClients.create(MONGO.getReplicaSetUrl());
+             Driver driver = GraphDatabase.driver(NEO4J.getBoltUrl(), AuthTokens.basic("neo4j", NEO4J_PASSWORD));
+             Session session = driver.session())
+        {
+            // Act
+            Document citizenCounter = client.getDatabase("smart_city_test").getCollection("counters")
+                    .find(new Document("_id", "citizen")).first();
+            long jobSequence = session.run("MATCH (s:Sequence {name: 'job'}) RETURN s.value AS v").single()
+                    .get("v").asLong();
+
+            // Assert: the sample city has citizens 1-3 and jobs 1-2
+            assertEquals(3L, ((Number) citizenCounter.get("seq")).longValue());
+            assertEquals(2L, jobSequence);
         }
     }
 

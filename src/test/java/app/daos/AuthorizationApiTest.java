@@ -20,6 +20,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
@@ -57,6 +59,8 @@ class AuthorizationApiTest
         {
             em.getTransaction().begin();
             em.createNativeQuery("TRUNCATE TABLE user_role, users, roles CASCADE").executeUpdate();
+            // Hibernate creates only the tables in the test database; the view behind /active-employment comes from SQL
+            em.createNativeQuery(readScript("SQL/views/active_employment.sql")).executeUpdate();
             em.getTransaction().commit();
         }
         StartupPopulator.populate(emf, ADMIN_PASSWORD);
@@ -69,6 +73,12 @@ class AuthorizationApiTest
     @AfterAll
     static void stopApp()
     {
+        try (EntityManager em = emf.createEntityManager())
+        {
+            em.getTransaction().begin();
+            em.createNativeQuery("DROP VIEW IF EXISTS v_active_employment").executeUpdate();
+            em.getTransaction().commit();
+        }
         app.stop();
         RestAssured.reset();
     }
@@ -149,7 +159,56 @@ class AuthorizationApiTest
                 .then().statusCode(200).body("title", equalTo("Developer")).body("salary", nullValue());
         withToken(user).when().get("/jobs").then().statusCode(200)
                 .body("data", not(empty()))
-                .body("data.salary", everyItem(nullValue()));        assertEquals(0, new BigDecimal("35000").compareTo(salaryAsAdmin(employment.jobId)));
+                .body("data.salary", everyItem(nullValue()));
+        assertEquals(0, new BigDecimal("35000").compareTo(salaryAsAdmin(employment.jobId)));
+
+        employment.delete();
+    }
+
+    @ParameterizedTest(name = "a normal user gets 403 for {0}")
+    @ValueSource(strings = {"/jobs?salaryFrom=1", "/jobs?salaryTo=100000", "/jobs?sort=salary,asc",
+            "/jobs?sort=salary,desc", "/jobs?sort=Salary,asc"})
+    @DisplayName("a normal user cannot filter or sort jobs by salary, which would reveal the hidden values")
+    void userCannotUseSalaryInTheList(String path)
+    {
+        as("User1", "Password123").when().get(path)
+                .then().statusCode(403).body("error", equalTo("Only an administrator can filter or sort by salary"));
+    }
+
+    @Test
+    @DisplayName("a normal user can still filter and sort jobs by other fields")
+    void userCanUseOtherJobParameters()
+    {
+        as("User1", "Password123").when().get("/jobs?title=dev&sort=title,asc&size=5").then().statusCode(200);
+    }
+
+    @Test
+    @DisplayName("an admin can filter and sort jobs by salary")
+    void adminCanUseSalaryInTheList()
+    {
+        Employment employment = employment();
+
+        as("admin", ADMIN_PASSWORD).when().get("/jobs?salaryFrom=30000&salaryTo=40000&sort=salary,desc")
+                .then().statusCode(200)
+                .body("data", not(empty()))
+                .body("data.salary", everyItem(not(nullValue())));
+
+        employment.delete();
+    }
+
+    @Test
+    @DisplayName("active employment: a normal user gets no salaries, an admin gets them")
+    void activeEmploymentHidesSalaryFromUser()
+    {
+        Employment employment = employment();
+
+        as("User1", "Password123").when().get("/active-employment")
+                .then().statusCode(200)
+                .body("citizen_id", not(empty()))
+                .body("salary", everyItem(nullValue()));
+        as("admin", ADMIN_PASSWORD).when().get("/active-employment")
+                .then().statusCode(200)
+                .body("salary", everyItem(not(nullValue())));
 
         employment.delete();
     }
@@ -322,6 +381,18 @@ class AuthorizationApiTest
         Object salary = as("admin", ADMIN_PASSWORD).when().get("/jobs/" + jobId)
                 .then().statusCode(200).extract().path("salary");
         return new BigDecimal(salary.toString());
+    }
+
+    private static String readScript(String path)
+    {
+        try
+        {
+            return Files.readString(Path.of(path));
+        }
+        catch (java.io.IOException e)
+        {
+            throw new IllegalStateException("Cannot read " + path, e);
+        }
     }
 
     private static int create(String token, String path, Map<String, Object> body)
