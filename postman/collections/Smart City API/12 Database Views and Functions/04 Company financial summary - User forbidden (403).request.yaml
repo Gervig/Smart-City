@@ -1,0 +1,20 @@
+$kind: http-request
+name: "Company financial summary - User forbidden (403)"
+url: "{{baseUrl}}/company-financial-summary"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: 'pm.request.headers.add({key: "Authorization", value: "Bearer {{token}}"});'
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 403", function () {
+          pm.response.to.have.status(403);
+      });
+      pm.test("Response time is below 1500ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+    language: text/javascript
+order: 4000

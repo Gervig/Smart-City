@@ -1,0 +1,24 @@
+$kind: http-request
+name: "Total salary - Invalid ID (400)"
+url: "{{baseUrl}}/citizens/0/total-salary"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: 'pm.request.headers.add({key: "Authorization", value: "Bearer {{adminToken}}"});'
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 400", function () {
+          pm.response.to.have.status(400);
+      });
+      pm.test("Response contains an error message", function () {
+          const response = pm.response.json();
+          pm.expect(response).to.have.property("error");
+      });
+      pm.test("Response time is below 1500ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+    language: text/javascript
+order: 13000
