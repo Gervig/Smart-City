@@ -102,19 +102,25 @@ class ConstraintsWithDatabaseTest
     }
 
     @Test
-    @DisplayName("preserves a location referenced by housing when deletion fails")
+    @DisplayName("preserves housing and sets location to null when location is deleted")
     void deleteReferencedLocation()
     {
         // Arrange
         Long locationId = fullHousing.getLocation().getId();
+        Long housingId = fullHousing.getId();
 
         // Act
-        assertThrows(PersistenceException.class, () -> locationDAO.delete(locationId));
+        locationDAO.delete(locationId);
 
         // Assert
         try (EntityManager em = emf.createEntityManager())
         {
-            assertNotNull(em.find(Location.class, locationId));
+            Housing housing = em.find(Housing.class, housingId);
+            Location location = em.find(Location.class, locationId);
+
+            assertNotNull(housing);
+            org.junit.jupiter.api.Assertions.assertNull(housing.getLocation());
+            org.junit.jupiter.api.Assertions.assertNull(location);
         }
     }
 
