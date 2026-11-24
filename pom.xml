@@ -34,6 +34,8 @@
         <wiremock.version>3.10.0</wiremock.version>
         <jacoco.version>0.8.12</jacoco.version>
         <surefire.version>3.5.2</surefire.version>
+        <openapi.version>6.4.0-1</openapi.version>
+        <swaggerui.version>6.4.0-1</swaggerui.version>
     </properties>
 
     <repositories>
@@ -191,6 +193,19 @@
             <artifactId>mapstruct</artifactId>
             <version>${mapstruct.version}</version>
         </dependency>
+        <!-- OpenAPI specification generation -->
+        <dependency>
+            <groupId>io.javalin.community.openapi</groupId>
+            <artifactId>javalin-openapi-plugin</artifactId>
+            <version>${openapi.version}</version>
+        </dependency>
+
+        <!-- Swagger UI -->
+        <dependency>
+            <groupId>io.javalin.community.openapi</groupId>
+            <artifactId>javalin-swagger-plugin</artifactId>
+            <version>${swaggerui.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -219,6 +234,11 @@
                             <groupId>org.mapstruct</groupId>
                             <artifactId>mapstruct-processor</artifactId>
                             <version>${mapstruct.version}</version>
+                        </path>
+                        <path>
+                            <groupId>io.javalin.community.openapi</groupId>
+                            <artifactId>openapi-annotation-processor</artifactId>
+                            <version>${openapi.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

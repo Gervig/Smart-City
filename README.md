@@ -415,7 +415,7 @@ The backend listens on `http://localhost:7070`. This section covers the interact
 
 ### API documentation (Swagger UI)
 
-With the backend running, open <http://localhost:7070/docs/>. The page lists every endpoint with its parameters, request and response bodies, status codes and required role, and lets you try the requests.
+With the backend running, open <http://localhost:7070/swagger>. The page lists every endpoint with its parameters, request and response bodies, status codes and required role, and lets you try the requests.
 
 1. Run `POST /api/auth/login` under **Authentication**, for example with `User1` / `Password123`, or `admin` with the `ADMIN_PASSWORD` of your environment.
 2. Copy the `token` from the response, press **Authorize** at the top and paste it.

@@ -6,6 +6,8 @@ import app.populators.StartupPopulator;
 import app.security.rest.SecurityController;
 import app.security.rest.TokenDenylist;
 import app.security.rest.TokenSettings;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.javalin.Javalin;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -25,6 +27,8 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.allOf;
@@ -34,6 +38,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.hamcrest.Matchers.empty;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Covers requirement(s): FR-03 (logout), FR-04 (no valid token gives 401), FR-05 (administrator actions: the
@@ -87,6 +92,46 @@ class AuthorizationApiTest
     @DisplayName("reading without a token gives 401")
     void readWithoutToken()
     {
+        given().when().get("/locations").then().statusCode(401);
+    }
+
+    @Test
+    @DisplayName("Swagger docs are public while the documented API remains protected")
+    void documentationIsPublicAndDocumentsProtectedEndpoints() throws Exception
+    {
+        String swaggerHtml = given().when().get("/swagger").then().statusCode(200).extract().asString();
+        Matcher bundleScript = Pattern.compile("src=\"([^\"]*swagger-ui-bundle\\.js)\"").matcher(swaggerHtml);
+        assertTrue(bundleScript.find(), "Swagger UI page should reference its bundle script");
+        int bundleStatus = given().when().get(bundleScript.group(1)).then().extract().statusCode();
+        assertEquals(200, bundleStatus, "Swagger UI bundle should load from " + bundleScript.group(1));
+
+        String response = given().when().get("/openapi").then().statusCode(200).extract().asString();
+        JsonNode specification = new ObjectMapper().readTree(response);
+        JsonNode paths = specification.path("paths");
+        for (String path : new String[]{
+                "/locations", "/locations/{id}", "/families", "/families/{id}",
+                "/housings", "/housings/{id}", "/citizens", "/citizens/{id}",
+                "/citizen-relationships", "/citizen-relationships/{id}",
+                "/institutions", "/institutions/{id}", "/companies", "/companies/{id}",
+                "/education-records", "/education-records/{id}", "/jobs", "/jobs/{id}",
+                "/locations/{id}/nearby", "/citizen-details", "/housing-occupancy",
+                "/company-financial-summary", "/active-employment", "/citizen-relationships-view",
+                "/citizens/{id}/total-salary", "/api/admin/seed/locations", "/api/admin/seed/fake",
+                "/api/admin/seed/enrich", "/api/auth/register", "/api/auth/login",
+                "/api/auth/logout", "/api/secured/demo"
+        })
+        {
+            assertTrue(paths.has(path), "Missing documented path " + path);
+        }
+
+        assertTrue(paths.path("/locations").path("get").path("security").toString().contains("BearerAuth"));
+        JsonNode loginSecurity = paths.path("/api/auth/login").path("post").path("security");
+        assertTrue(loginSecurity.isMissingNode() || loginSecurity.isEmpty(), "Login must remain public");
+        assertEquals("http", specification.path("components").path("securitySchemes")
+                .path("BearerAuth").path("type").asText());
+        assertEquals("bearer", specification.path("components").path("securitySchemes")
+                .path("BearerAuth").path("scheme").asText());
+
         given().when().get("/locations").then().statusCode(401);
     }
 

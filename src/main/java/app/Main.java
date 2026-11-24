@@ -11,8 +11,11 @@ import app.security.daos.UserDAO;
 import app.security.rest.SecurityController;
 import app.security.rest.SecurityRoutes;
 import io.javalin.Javalin;
+import io.javalin.http.Handler;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.PersistenceException;
+import io.javalin.openapi.plugin.OpenApiPlugin;
+import io.javalin.openapi.plugin.swagger.SwaggerPlugin;
 
 import java.util.Map;
 
@@ -35,13 +38,21 @@ public class Main {
         UserDAO.getInstance(emf);
 
         Javalin app = Javalin.create(config -> {
+            config.registerPlugin(new OpenApiPlugin(openApi ->
+                    openApi.withDefinitionConfiguration((version, definition) -> {
+                        definition.withInfo(info -> info.title("Smart City API")
+                                .version("1.0.0")
+                                .description("REST API for city data. Protected operations use HS256 JWT bearer tokens."));
+                        definition.withSecurity(security -> security.withBearerAuth("BearerAuth"));
+                    })));
+            config.registerPlugin(new SwaggerPlugin());
             config.bundledPlugins.enableRouteOverview("/api/routes");
             config.router.apiBuilder(() -> {
                 path("/api", SecurityRoutes.getRoutes(emf, securityController));
             });
         })
-        .beforeMatched(securityController.authenticate())
-        .beforeMatched(securityController.authorize())
+        .beforeMatched(excludingDocumentation(securityController.authenticate()))
+        .beforeMatched(excludingDocumentation(securityController.authorize()))
         .exception(ApiException.class, (e, ctx) -> ctx.status(e.getCode()).json(Map.of("error", e.getMessage(), "status", e.getCode())))
         .exception(NotAuthorizedException.class, (e, ctx) -> ctx.status(e.getStatusCode()).json(Map.of("error", e.getMessage(), "status", e.getStatusCode())))
         .exception(ValidationException.class, (e, ctx) -> ctx.status(400).json(Map.of("error", e.getMessage())))
@@ -52,5 +63,19 @@ public class Main {
         Routes.register(app, emf);
 
         return app;
+    }
+
+    private static Handler excludingDocumentation(Handler securityHandler) {
+        return ctx -> {
+            String path = ctx.path();
+            boolean documentationRequest = path.equals("/openapi")
+                    || path.equals("/swagger")
+                    || path.startsWith("/swagger/")
+                    || path.equals("/webjars/swagger-ui")
+                    || path.startsWith("/webjars/swagger-ui/");
+            if (!documentationRequest) {
+                securityHandler.handle(ctx);
+            }
+        };
     }
 }
