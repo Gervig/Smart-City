@@ -4,6 +4,7 @@ import app.entities.Citizen;
 import app.entities.Family;
 import app.entities.Institution;
 import app.exceptions.NotFoundException;
+import app.security.AuditContext;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -49,11 +50,21 @@ public class GenericDAO<T>
         this.type = Objects.requireNonNull(type, "Entity type is required");
     }
 
+    /**
+     * Starts a write transaction and tells PostgreSQL which API user makes it, so the audit triggers
+     * (SQL/audit/09_audit_log.sql) record the person and not only the database user smartcity_app.
+     */
+    private static void begin(EntityManager em)
+    {
+        em.getTransaction().begin();
+        AuditContext.tag(em);
+    }
+
     public T persist(T entity)
     {
         try (EntityManager em = emf.createEntityManager())
         {
-            em.getTransaction().begin();
+            begin(em);
             em.persist(entity);
             em.getTransaction().commit();
             return entity;
@@ -69,7 +80,7 @@ public class GenericDAO<T>
         try (EntityManager em = emf.createEntityManager())
         {
             var transaction = em.getTransaction();
-            transaction.begin();
+            begin(em);
             try
             {
                 for (T entity : entities)
@@ -93,7 +104,7 @@ public class GenericDAO<T>
     {
         try (EntityManager em = emf.createEntityManager())
         {
-            em.getTransaction().begin();
+            begin(em);
             T merged = em.merge(entity);
             em.getTransaction().commit();
             return merged;
@@ -125,7 +136,7 @@ public class GenericDAO<T>
         try (EntityManager em = emf.createEntityManager())
         {
             var transaction = em.getTransaction();
-            transaction.begin();
+            begin(em);
             try
             {
                 List<E> merged = new ArrayList<>();
@@ -456,7 +467,7 @@ public class GenericDAO<T>
         }
         try (EntityManager em = emf.createEntityManager())
         {
-            em.getTransaction().begin();
+            begin(em);
             T entity = em.find(type, id);
             if (entity == null)
             {

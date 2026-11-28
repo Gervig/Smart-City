@@ -3,6 +3,7 @@ package app.security.rest;
 import app.exceptions.ApiException;
 import app.exceptions.NotAuthorizedException;
 import app.exceptions.ValidationException;
+import app.security.AuditContext;
 import app.security.daos.PostgresUserStore;
 import app.security.daos.UserDAO;
 import app.security.daos.UserStore;
@@ -231,6 +232,9 @@ public class SecurityController implements ISecurityController
     {
         return (ctx) ->
         {
+            // The thread is reused: never let the previous request's user end up in this request's audit log
+            AuditContext.clear();
+
             // This is a preflight request => no need for authentication
             if (ctx.method() == HandlerType.OPTIONS)
             {
@@ -266,6 +270,7 @@ public class SecurityController implements ISecurityController
                 throw new UnauthorizedResponse("Invalid user or token"); // UnauthorizedResponse is javalin 6 specific but response is not json!
             }
             ctx.attribute("user", verifiedTokenUser); // -> ctx.attribute("user") in ApplicationConfig beforeMatched filter
+            AuditContext.setUser(verifiedTokenUser.getUsername()); // -> app_user in the PostgreSQL audit log
             ctx.attribute(TOKEN_ATTRIBUTE, token); // -> the denylist check in authorize() and logout()
         };
     }
