@@ -41,7 +41,7 @@ src/main/resources/config.properties
 # Leftover Python stuff
 .venv
 /.postman
-docs/sonarqube.txt
+docs/static testing tools/sonarqube.txt
 
 # Database backups
 /backups/

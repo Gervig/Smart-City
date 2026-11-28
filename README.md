@@ -250,7 +250,7 @@ mvn test -Dtest=OverpassLiveTest -Doverpass.live=true
 ```
 
 #### Screenshot of JaCoCo report
-![docs/jacoco1.png](docs/jacoco1.png)
+![docs/jacoco1.png](docs/static%20testing%20tools/jacoco1.png)
 
 `app.security.rest` contains controllers and routes and is therefore not covered by unit or integration tests, just like the main routes and controllers. Those are covered by the [API tests in Postman](#api-tests-with-postman).
 
@@ -304,11 +304,11 @@ A finding can be fixed, or set to **Accepted** or **False positive** with a comm
 
 ### SonarQube screenshots
 #### First run
-![docs/sonarqube1.png](docs/sonarqube1.png)
+![docs/sonarqube1.png](docs/static%20testing%20tools/sonarqube1.png)
 #### Example of an issue (GenericDAO mergeAllEntities)
-![docs/sonarqube - mergeallentities1.png](docs/sonarqube%20-%20mergeallentities1.png)
+![docs/sonarqube - mergeallentities1.png](docs/static%20testing%20tools/sonarqube%20-%20mergeallentities1.png)
 ### Latest run
-![docs/sonarqube2.png](docs/sonarqube2.png)
+![docs/sonarqube2.png](docs/static%20testing%20tools/sonarqube2.png)
 
 Code coverage doesn't match the real picture, code for controllers and routes have been excluded for SonarQube coverage to pass quality gate. For real picture of code coverage, see the [Screenshot of JaCoCo report](#screenshot-of-jacoco-report).
 
@@ -319,7 +319,7 @@ Import `postman/SmartCity.postman_collection.json` and the local environment fro
 The `09 Jobs` folder uses an admin token, because only an admin can create jobs and see or set salaries. `00 Auth` gets it with "Login as admin", which uses the environment variable `adminPassword` (default `Admin123!`). It must match `ADMIN_PASSWORD` in your `config.properties`; change one of them if yours differs.
 
 ### Screenshot of Postman collection run
-![docs/postman1.png](docs/postman1.png)
+![docs/postman1.png](docs/api%20testing/postman1.png)
 
 ## Frontend demo
 
@@ -416,7 +416,7 @@ The negative tests assert the validation messages from `src/main/java/app/valida
 - Static analysis and JaCoCo coverage cover the backend only. The frontend is covered by these end-to-end tests.
 
 ### Screenshot of Playwright report
-![docs/playwright1.png](docs/playwright1.png)
+![docs/playwright1.png](docs/end%20to%20end/playwright1.png)
 
 ## API reference
 
