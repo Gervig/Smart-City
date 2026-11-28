@@ -146,16 +146,19 @@ public final class DocumentMapper
                         .append("startDate", e.startDate())
                         .append("endDate", e.endDate()))).toList();
 
-        // Each of the two citizens gets the relationship, pointing at the other one
+        // Each of the two citizens gets the relationship, pointing at the other one. direction keeps which side is
+        // citizen_id_1 ("outgoing") and which is citizen_id_2 ("incoming"), so the row can be rebuilt from either copy
         List<Document> relationships = lookups.relationships().getOrDefault(c.id(), List.of()).stream().map(r ->
         {
-            long other = r.citizenId1() == c.id() ? r.citizenId2() : r.citizenId1();
+            boolean first = r.citizenId1() == c.id();
+            long other = first ? r.citizenId2() : r.citizenId1();
             CitizenRow o = lookups.citizens().get(other);
             return withoutNulls(doc()
                     .append("id", r.id())
                     .append("type", r.type())
                     .append("citizenId", other)
                     .append("name", o.firstName() + " " + o.lastName())
+                    .append("direction", first ? "outgoing" : "incoming")
                     .append("startDate", r.startDate())
                     .append("endDate", r.endDate()));
         }).toList();

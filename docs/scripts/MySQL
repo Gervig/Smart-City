@@ -4,13 +4,13 @@ CREATE TABLE `Citizen` (
   `last_name` <type>,
   `birth_date` <type>,
   `death_date (NULLABLE)` <type>,
-  `status (alive / dead)` <type>,
+  `status (alive / deceased)` <type>,
   `gender` <type>,
   `age` <type>,
   `family_id (FK)` <type>,
   `housing_id (FK)` <type>,
   KEY `Long` (`id (PK)`),
-  KEY `String` (`first_name`, `last_name`, `status (alive / dead)`, `gender`),
+  KEY `String` (`first_name`, `last_name`, `status (alive / deceased)`, `gender`),
   KEY `date` (`birth_date`, `death_date (NULLABLE)`),
   KEY `int` (`age`),
   KEY `long` (`housing_id (FK)`)
@@ -107,8 +107,7 @@ CREATE TABLE `Education_Record` (
   FOREIGN KEY (`institution_id (FK)`)
       REFERENCES `Institution`(`type (High School, College, Hospital)`),
   FOREIGN KEY (`institution_id (FK)`)
-      REFERENCES `Citizen`(`status (alive / dead)`),
+      REFERENCES `Citizen`(`status (alive / deceased)`),
   KEY `Long` (`id(Pk)`, `citizen_id(FK)`, `institution_id (FK)`),
   KEY `Date` (`start_date`, `end_date (NULLABLE)`)
 );
-

@@ -29,6 +29,11 @@
               <artifactId>mapstruct-processor</artifactId>
               <version>${mapstruct.version}</version>
             </path>
+            <path>
+              <groupId>io.javalin.community.openapi</groupId>
+              <artifactId>openapi-annotation-processor</artifactId>
+              <version>${openapi.version}</version>
+            </path>
           </annotationProcessorPaths>
         </configuration>
       </plugin>
@@ -284,6 +289,18 @@
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
+      <artifactId>mongodb</artifactId>
+      <version>1.21.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>neo4j</artifactId>
+      <version>1.21.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>1.21.4</version>
       <scope>test</scope>
@@ -324,9 +341,12 @@
     </dependency>
   </dependencies>
   <properties>
+    <neo4j.version>5.28.15</neo4j.version>
     <wiremock.version>3.10.0</wiremock.version>
+    <mongodb.version>5.15.0</mongodb.version>
     <postgres.version>42.7.5</postgres.version>
     <jackson.version>2.16.0</jackson.version>
+    <openapi.version>6.4.0-1</openapi.version>
     <jbcrypt.version>0.4</jbcrypt.version>
     <slf4j.version>2.0.16</slf4j.version>
     <mapstruct.version>1.6.3</mapstruct.version>
@@ -335,6 +355,7 @@
     <logback.version>1.5.17</logback.version>
     <hibernate-version>6.6.6.Final</hibernate-version>
     <maven.compiler.source>17</maven.compiler.source>
+    <swaggerui.version>6.4.0-1</swaggerui.version>
     <jacoco.version>0.8.12</jacoco.version>
     <testcontainers.version>1.21.4</testcontainers.version>
     <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>

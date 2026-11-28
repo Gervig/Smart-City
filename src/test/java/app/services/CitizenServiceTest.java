@@ -1,6 +1,7 @@
 package app.services;
 
 import app.daos.GenericDAO;
+import app.dtos.CitizenDTO;
 import app.dtos.CitizenRequestDTO;
 import app.entities.Citizen;
 import app.entities.Family;
@@ -9,11 +10,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -22,7 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Covers requirement(s): FR-08, FR-09, FR-13
+ - Covers requirement(s): FR-08, FR-09, FR-13
  */
 @ExtendWith(MockitoExtension.class)
 class CitizenServiceTest
@@ -55,36 +60,50 @@ class CitizenServiceTest
     }
 
     @Test
-    @DisplayName("creates a valid citizen once")
+    @DisplayName("[CH-V1] creates a valid citizen once")
     void create()
     {
         // Arrange
         when(familyDAO.findByIdOrThrow(1L)).thenReturn(family);
         when(citizenDAO.persist(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
+        LocalDate birthDate = LocalDate.now();
+
         // Act
-        service.create(request(LocalDate.now(), null, "alive", null));
+        CitizenDTO result = service.create(request(birthDate, null, "alive", null));
 
         // Assert
-        verify(citizenDAO).persist(any());
+        ArgumentCaptor<Citizen> saved = ArgumentCaptor.forClass(Citizen.class);
+        verify(citizenDAO).persist(saved.capture());
+        assertEquals("Alex", saved.getValue().getFirstName());
+        assertEquals("Smith", saved.getValue().getLastName());
+        assertEquals(birthDate, saved.getValue().getBirthDate());
+        assertEquals("alive", saved.getValue().getStatus());
+        assertSame(family, saved.getValue().getFamily());
+        assertNull(saved.getValue().getHousing());
+        assertEquals("Alex", result.firstName());
+        assertEquals(1L, result.familyId());
+        assertNull(result.housingId());
     }
 
     @Test
-    @DisplayName("rejects an invalid citizen before persistence")
+    @DisplayName("[CB-I1] rejects an invalid citizen before persistence")
     void createInvalid()
     {
         // Arrange
         CitizenRequestDTO request = request(LocalDate.now().plusDays(1), null, "alive", null);
 
         // Act
-        assertThrows(IllegalArgumentException.class, () -> service.create(request));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> service.create(request));
 
         // Assert
+        assertEquals("birthDate must not be in the future", exception.getMessage());
         verify(citizenDAO, never()).persist(any());
     }
 
     @Test
-    @DisplayName("rejects a citizen when housing is full")
+    @DisplayName("[CH-I1] rejects a citizen when housing is full")
     void createHousingFull()
     {
         // Arrange
@@ -102,7 +121,7 @@ class CitizenServiceTest
     }
 
     @Test
-    @DisplayName("accepts a citizen when housing has capacity")
+    @DisplayName("[CH-V2] accepts a citizen when housing has capacity")
     void createHousingAvailable()
     {
         // Arrange
@@ -112,14 +131,17 @@ class CitizenServiceTest
         when(citizenDAO.persist(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
-        service.create(request(LocalDate.now(), null, "alive", 2L));
+        CitizenDTO result = service.create(request(LocalDate.now(), null, "alive", 2L));
 
         // Assert
-        verify(citizenDAO).persist(any());
+        ArgumentCaptor<Citizen> saved = ArgumentCaptor.forClass(Citizen.class);
+        verify(citizenDAO).persist(saved.capture());
+        assertSame(housing, saved.getValue().getHousing());
+        assertEquals(2L, result.housingId());
     }
 
     @Test
-    @DisplayName("does not count the updated citizen twice in its current housing")
+    @DisplayName("[CH-V3] does not count the updated citizen twice in its current housing")
     void updateKeepsFullHousing()
     {
         // Arrange
@@ -134,24 +156,28 @@ class CitizenServiceTest
         when(citizenDAO.merge(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
-        service.update(3L, request(LocalDate.now(), null, "alive", 2L));
+        CitizenDTO result = service.update(3L, request(LocalDate.now(), null, "alive", 2L));
 
         // Assert
-        verify(citizenDAO).merge(any());
+        verify(citizenDAO).merge(citizen);
+        assertSame(housing, citizen.getHousing());
+        assertEquals(3L, result.id());
+        assertEquals(2L, result.housingId());
     }
 
     @Test
-    @DisplayName("rejects housing for a dead citizen")
-    void createDeadCitizenWithHousing()
+    @DisplayName("[CS-I7] rejects housing for a deceased citizen")
+    void createDeceasedCitizenWithHousing()
     {
         // Arrange
         LocalDate date = LocalDate.now().minusYears(10);
 
         // Act
-        assertThrows(IllegalArgumentException.class,
-                () -> service.create(request(date, date, "dead", 2L)));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> service.create(request(date, date, "deceased", 2L)));
 
         // Assert
+        assertEquals("housingId must be null for a deceased citizen", exception.getMessage());
         verify(citizenDAO, never()).persist(any());
     }
 }

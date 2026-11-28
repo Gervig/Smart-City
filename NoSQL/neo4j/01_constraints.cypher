@@ -26,8 +26,15 @@ CREATE CONSTRAINT company_id IF NOT EXISTS FOR (n:Company) REQUIRE n.id IS UNIQU
 CREATE CONSTRAINT institution_id IF NOT EXISTS FOR (n:Institution) REQUIRE n.id IS UNIQUE;
 CREATE CONSTRAINT user_username IF NOT EXISTS FOR (n:User) REQUIRE n.username IS UNIQUE;
 CREATE CONSTRAINT role_name IF NOT EXISTS FOR (n:Role) REQUIRE n.name IS UNIQUE;
+// The CRUD application's id counters (Neo4j has no sequences), one per entity, set by the migrator
+CREATE CONSTRAINT sequence_name IF NOT EXISTS FOR (n:Sequence) REQUIRE n.name IS UNIQUE;
 
 // Indexes for common lookups
 CREATE INDEX citizen_name IF NOT EXISTS FOR (n:Citizen) ON (n.lastName, n.firstName);
 CREATE INDEX related_to_type IF NOT EXISTS FOR ()-[r:RELATED_TO]-() ON (r.type);
 CREATE INDEX works_at_status IF NOT EXISTS FOR ()-[r:WORKS_AT]-() ON (r.status);
+
+// Jobs, education records and relationships are relationships; the API finds them by id (/neo4j/jobs/{id})
+CREATE INDEX works_at_id IF NOT EXISTS FOR ()-[r:WORKS_AT]-() ON (r.id);
+CREATE INDEX studied_at_id IF NOT EXISTS FOR ()-[r:STUDIED_AT]-() ON (r.id);
+CREATE INDEX related_to_id IF NOT EXISTS FOR ()-[r:RELATED_TO]-() ON (r.id);

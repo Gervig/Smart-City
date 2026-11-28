@@ -1,0 +1,37 @@
+$kind: http-request
+name: "Get citizen relationships view (200)"
+url: "{{baseUrl}}/citizen-relationships-view"
+method: GET
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: 'pm.request.headers.add({key: "Authorization", value: "Bearer {{token}}"});'
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test("Response is JSON", function () {
+          pm.response.to.be.json;
+      });
+      pm.test("Response is an array", function () {
+          pm.expect(pm.response.json()).to.be.an("array");
+      });
+      pm.test("Response contains expected fields", function () {
+          const response = pm.response.json();
+          if (response.length > 0) {
+              pm.expect(response[0]).to.have.property("relationship_id");
+              pm.expect(response[0]).to.have.property("citizen_1_id");
+              pm.expect(response[0]).to.have.property("citizen_1_name");
+              pm.expect(response[0]).to.have.property("relationship_type");
+              pm.expect(response[0]).to.have.property("citizen_2_id");
+              pm.expect(response[0]).to.have.property("citizen_2_name");
+          }
+      });
+      pm.test("Response time is below 1500ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(1500);
+      });
+    language: text/javascript
+order: 7000

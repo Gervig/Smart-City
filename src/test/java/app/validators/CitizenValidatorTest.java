@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -28,7 +29,7 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("accepts a valid alive citizen")
+    @DisplayName("[CN-V1, CB-V1, CD-V3, CS-V1] accepts a valid alive citizen")
     void validate()
     {
         // Arrange
@@ -39,12 +40,12 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("accepts a dead citizen with a valid death date and no housing")
+    @DisplayName("[CD-V1, CS-V2] accepts a deceased citizen with a valid death date and no housing")
     void validateDeadCitizen()
     {
         // Arrange
         LocalDate date = LocalDate.now().minusYears(20);
-        CitizenRequestDTO request = request("Alex", "Smith", date, date, "dead", null);
+        CitizenRequestDTO request = request("Alex", "Smith", date, date, "deceased", null);
 
         // Act / Assert
         assertDoesNotThrow(() -> CitizenValidator.validate(request));
@@ -53,7 +54,7 @@ class CitizenValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", " "})
-    @DisplayName("rejects a missing first name")
+    @DisplayName("[CN-I1, CN-I2, CN-I3] rejects a missing first name")
     void validateFirstName(String value)
     {
         // Arrange
@@ -70,7 +71,7 @@ class CitizenValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", " "})
-    @DisplayName("rejects a missing last name")
+    @DisplayName("[CN-I1, CN-I2, CN-I3] rejects a missing last name")
     void validateLastName(String value)
     {
         // Arrange
@@ -84,6 +85,38 @@ class CitizenValidatorTest
         assertTrue(exception.getMessage().startsWith("lastName"));
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {1, CitizenValidator.MAX_NAME_LENGTH})
+    @DisplayName("[CN-V3, CN-V4] accepts first and last names of 1 and of 100 characters")
+    void validateNameLength(int length)
+    {
+        // Arrange
+        String name = "a".repeat(length);
+        CitizenRequestDTO request = request(name, name, LocalDate.now(), null, "alive", null);
+
+        // Act / Assert
+        assertDoesNotThrow(() -> CitizenValidator.validate(request));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"firstName", "lastName"})
+    @DisplayName("[CN-I4] rejects a first or last name of 101 characters")
+    void validateNameTooLong(String field)
+    {
+        // Arrange
+        String tooLong = "a".repeat(CitizenValidator.MAX_NAME_LENGTH + 1);
+        CitizenRequestDTO request = "firstName".equals(field)
+                ? request(tooLong, "Smith", LocalDate.now(), null, "alive", null)
+                : request("Alex", tooLong, LocalDate.now(), null, "alive", null);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> CitizenValidator.validate(request));
+
+        // Assert
+        assertEquals(field + " must be at most 100 characters", exception.getMessage());
+    }
+
     static Stream<org.junit.jupiter.params.provider.Arguments> birthDates()
     {
         return Stream.of(
@@ -94,7 +127,7 @@ class CitizenValidatorTest
 
     @ParameterizedTest
     @MethodSource("birthDates")
-    @DisplayName("allows today but rejects a future birth date")
+    @DisplayName("[CB-V1, CB-I1] allows today but rejects a future birth date")
     void validateBirthDate(LocalDate date, boolean invalid)
     {
         // Arrange
@@ -114,7 +147,7 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("rejects a missing birth date")
+    @DisplayName("[CB-I2] rejects a missing birth date")
     void validateMissingBirthDate()
     {
         // Arrange
@@ -139,35 +172,32 @@ class CitizenValidatorTest
 
     @ParameterizedTest
     @MethodSource("deathDates")
-    @DisplayName("allows death on birth date but rejects an earlier death date")
-    void validateDeathDate(LocalDate date, boolean invalid)
-    {
+    @DisplayName("[CD-V1, CD-I1] validates death date against birth date")
+    void validateDeathDate(LocalDate date, boolean invalid) {
         // Arrange
         LocalDate birthDate = LocalDate.now().minusYears(20);
-        CitizenRequestDTO request = request("Alex", "Smith", birthDate, date, "dead", null);
+        CitizenRequestDTO request =
+                request("Alex", "Smith", birthDate, date, "deceased", null);
 
-        // Act
-        if (invalid)
-        {
+        // Act & Assert
+        if (invalid) {
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                     () -> CitizenValidator.validate(request));
-            assertTrue(exception.getMessage().startsWith("deathDate"));
-        }
-        else
-        {
+            assertEquals("deathDate must not be before birthDate", exception.getMessage());
+        } else {
             assertDoesNotThrow(() -> CitizenValidator.validate(request));
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"alive", "dead"})
-    @DisplayName("accepts allowed status values when dates agree")
+    @ValueSource(strings = {"alive", "deceased"})
+    @DisplayName("[CB-V2, CS-V1, CS-V2] accepts allowed status values when dates agree")
     void validateStatus(String status)
     {
         // Arrange
         LocalDate date = LocalDate.now().minusYears(20);
         CitizenRequestDTO request = request("Alex", "Smith", date,
-                "dead".equals(status) ? date : null, status, null);
+                "deceased".equals(status) ? date : null, status, null);
 
         // Act / Assert
         assertDoesNotThrow(() -> CitizenValidator.validate(request));
@@ -176,7 +206,7 @@ class CitizenValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"unknown", "", " "})
-    @DisplayName("rejects an invalid status")
+    @DisplayName("[CS-I1, CS-I2] rejects an invalid status")
     void validateInvalidStatus(String status)
     {
         // Arrange
@@ -191,7 +221,7 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("requires a living citizen to have no death date")
+    @DisplayName("[CS-I5] requires a living citizen to have no death date")
     void validateAliveDeathDate()
     {
         // Arrange
@@ -207,12 +237,12 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("requires a dead citizen to have a death date")
+    @DisplayName("[CS-I6] requires a deceased citizen to have a death date")
     void validateDeadDeathDate()
     {
         // Arrange
         CitizenRequestDTO request = request("Alex", "Smith", LocalDate.now().minusYears(1),
-                null, "dead", null);
+                null, "deceased", null);
 
         // Act
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
@@ -223,12 +253,12 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("rejects housing for a dead citizen")
+    @DisplayName("[CS-I7] rejects housing for a deceased citizen")
     void validateDeadHousing()
     {
         // Arrange
         LocalDate date = LocalDate.now().minusYears(20);
-        CitizenRequestDTO request = request("Alex", "Smith", date, date, "dead", 1L);
+        CitizenRequestDTO request = request("Alex", "Smith", date, date, "deceased", 1L);
 
         // Act
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
@@ -239,14 +269,58 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("accepts a death date after birth")
+    @DisplayName("[CD-V2] accepts a death date after birth")
     void validateDeathDateAfterBirth()
     {
         // Arrange
         LocalDate birthDate = LocalDate.now().minusYears(20);
-        CitizenRequestDTO request = request("Alex", "Smith", birthDate, birthDate.plusDays(1), "dead", null);
+        CitizenRequestDTO request = request("Alex", "Smith", birthDate, birthDate.plusDays(1), "deceased", null);
 
         // Act / Assert
         assertDoesNotThrow(() -> CitizenValidator.validate(request));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Søren", "Anne-Marie", "O'Brien", "Jean Luc"})
+    @DisplayName("[CN-V2] accepts names with Danish letters, hyphens, apostrophes and spaces")
+    void validNameCharacters(String name)
+    {
+        // Arrange
+        CitizenRequestDTO request = request(name, name, LocalDate.now(), null, "alive", null);
+
+        // Act / Assert
+        assertDoesNotThrow(() -> CitizenValidator.validate(request));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Anna\n", "An\tna", "Anna\0", "Anna\u007F"})
+    @DisplayName("[CN-I5] rejects a first name with a control character")
+    void nameWithControlCharacter(String value)
+    {
+        // Arrange
+        CitizenRequestDTO request = request(value, "Smith", LocalDate.now(), null, "alive", null);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> CitizenValidator.validate(request));
+
+        // Assert
+        assertEquals("firstName must not contain control characters", exception.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Alive", "ALIVE", "alive ", " deceased"})
+    @DisplayName("[CS-I3, CS-I4] rejects a status in the wrong case or with surrounding spaces")
+    void statusWrongCaseOrSpaces(String value)
+    {
+        // Arrange
+        CitizenRequestDTO request = request("Alex", "Smith", LocalDate.now(), null, value, null);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> CitizenValidator.validate(request));
+
+        // Assert
+        assertEquals("status must be one of alive, deceased", exception.getMessage());
     }
 }

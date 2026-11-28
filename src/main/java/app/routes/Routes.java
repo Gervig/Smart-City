@@ -2,6 +2,7 @@
 package app.routes;
 
 import app.controllers.CrudController;
+import app.controllers.DocumentedCrudControllers;
 import app.controllers.JobController;
 import app.controllers.NearbyPlacesController;
 import app.controllers.SeedController;
@@ -90,28 +91,28 @@ public class Routes {
 
         // Existing CRUD routes
         crud(app, "/locations",
-                new CrudController<>(locationService, LocationRequestDTO.class));
+                new DocumentedCrudControllers.Locations(locationService));
 
         crud(app, "/families",
-                new CrudController<>(familyService, FamilyRequestDTO.class));
+                new DocumentedCrudControllers.Families(familyService));
 
         crud(app, "/housings",
-                new CrudController<>(housingService, HousingRequestDTO.class));
+                new DocumentedCrudControllers.Housings(housingService));
 
         crud(app, "/citizens",
-                new CrudController<>(citizenService, CitizenRequestDTO.class));
+                new DocumentedCrudControllers.Citizens(citizenService));
 
         crud(app, "/citizen-relationships",
-                new CrudController<>(citizenRelationshipService, CitizenRelationshipRequestDTO.class));
+                new DocumentedCrudControllers.CitizenRelationships(citizenRelationshipService));
 
         crud(app, "/institutions",
-                new CrudController<>(institutionService, InstitutionRequestDTO.class));
+                new DocumentedCrudControllers.Institutions(institutionService));
 
         crud(app, "/companies",
-                new CrudController<>(companyService, CompanyRequestDTO.class));
+                new DocumentedCrudControllers.Companies(companyService));
 
         crud(app, "/education-records",
-                new CrudController<>(educationRecordService, EducationRecordRequestDTO.class));
+                new DocumentedCrudControllers.EducationRecords(educationRecordService));
 
         crud(app, "/jobs", new JobController(jobService), ADMINS);
 
@@ -161,6 +162,25 @@ public class Routes {
                 seedController::enrich,
                 Role.ADMIN
         );
+    }
+
+    /**
+     * The same nine resources for another database solution, under a prefix: /mongodb/citizens, /neo4j/jobs, ...
+     * The controllers, DTOs, validators, paging and role rules (including the admin-only salary in JobController) are
+     * the ones the PostgreSQL routes use; only the services behind them differ.
+     */
+    public static void registerSolution(Javalin app, String prefix, CrudServices s) {
+        crud(app, prefix + "/locations", new CrudController<>(s.locations(), LocationRequestDTO.class));
+        crud(app, prefix + "/families", new CrudController<>(s.families(), FamilyRequestDTO.class));
+        crud(app, prefix + "/housings", new CrudController<>(s.housings(), HousingRequestDTO.class));
+        crud(app, prefix + "/citizens", new CrudController<>(s.citizens(), CitizenRequestDTO.class));
+        crud(app, prefix + "/citizen-relationships",
+                new CrudController<>(s.relationships(), CitizenRelationshipRequestDTO.class));
+        crud(app, prefix + "/institutions", new CrudController<>(s.institutions(), InstitutionRequestDTO.class));
+        crud(app, prefix + "/companies", new CrudController<>(s.companies(), CompanyRequestDTO.class));
+        crud(app, prefix + "/education-records",
+                new CrudController<>(s.educationRecords(), EducationRecordRequestDTO.class));
+        crud(app, prefix + "/jobs", new JobController(s.jobs()), ADMINS);
     }
 
     // Role rules: users and administrators have full CRUD on all city data.

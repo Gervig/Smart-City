@@ -3,6 +3,7 @@ package migrator.document;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.UpdateOptions;
 import org.bson.Document;
 
 import java.util.ArrayList;
@@ -32,6 +33,15 @@ public class MongoWriter
     /** @return number of documents per collection, counted in MongoDB after writing */
     public Map<String, Long> write(Map<String, List<Document>> collections)
     {
+        return write(collections, Map.of());
+    }
+
+    /**
+     * @param sequences the highest id per entity, stored in the collection "counters" ({_id: name, seq: id}) so the
+     *                  CRUD application continues after the migrated ids
+     */
+    public Map<String, Long> write(Map<String, List<Document>> collections, Map<String, Long> sequences)
+    {
         try (MongoClient client = MongoClients.create(uri))
         {
             MongoDatabase db = client.getDatabase(databaseName);
@@ -45,6 +55,8 @@ public class MongoWriter
                     db.getCollection(name).insertMany(documents);
                 }
             });
+            sequences.forEach((name, max) -> db.getCollection("counters").updateOne(new Document("_id", name),
+                    new Document("$set", new Document("seq", max)), new UpdateOptions().upsert(true)));
 
             Map<String, Long> counts = new LinkedHashMap<>();
             collections.keySet().forEach(name -> counts.put(name, db.getCollection(name).countDocuments()));
