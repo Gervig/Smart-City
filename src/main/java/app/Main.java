@@ -5,36 +5,39 @@ import app.exceptions.ApiException;
 import app.exceptions.NotAuthorizedException;
 import app.exceptions.NotFoundException;
 import app.exceptions.ValidationException;
-import app.mongo.MongoStore;
-import app.mongo.MongoUserStore;
-import app.neo4j.Neo4jStore;
-import app.neo4j.Neo4jUserStore;
-import app.nosql.NoSqlSettings;
 import app.populators.StartupPopulator;
 import app.routes.CrudServices;
 import app.routes.Routes;
 import app.security.daos.UserDAO;
 import app.security.rest.SecurityController;
 import app.security.rest.SecurityRoutes;
-import app.security.rest.TokenDenylist;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mongodb.MongoSocketException;
 import com.mongodb.MongoTimeoutException;
 import io.javalin.Javalin;
 import io.javalin.http.Handler;
+import io.javalin.openapi.plugin.OpenApiPlugin;
+import io.javalin.openapi.plugin.swagger.SwaggerPlugin;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.PersistenceException;
 import org.neo4j.driver.exceptions.AuthenticationException;
 import org.neo4j.driver.exceptions.ServiceUnavailableException;
 import org.neo4j.driver.exceptions.SessionExpiredException;
-import io.javalin.openapi.plugin.OpenApiPlugin;
-import io.javalin.openapi.plugin.swagger.SwaggerPlugin;
 
-import java.util.Map;
+import java.util.*;
 
 import static io.javalin.apibuilder.ApiBuilder.path;
 
 public class Main
 {
+    private static final Set<String> CRUD_RESOURCES = Set.of(
+            "locations", "families", "housings", "citizens", "citizen-relationships",
+            "institutions", "companies", "education-records", "jobs");
+    private static final Set<String> HTTP_METHODS = Set.of(
+            "get", "put", "post", "delete", "options", "head", "patch", "trace");
+
     public static void main(String[] args)
     {
         EntityManagerFactory emf = HibernateConfig.getEntityManagerFactory();
@@ -77,6 +80,7 @@ public class Main
                                         .version("1.0.0")
                                         .description("REST API for city data. Protected operations use HS256 JWT bearer tokens."));
                                 definition.withSecurity(security -> security.withBearerAuth("BearerAuth"));
+                                definition.withDefinitionProcessor(Main::addSolutionPaths);
                             })));
                     config.registerPlugin(new SwaggerPlugin());
                     config.bundledPlugins.enableRouteOverview("/api/routes");
@@ -111,6 +115,101 @@ public class Main
         }
 
         return app;
+    }
+
+    private static String addSolutionPaths(ObjectNode definition)
+    {
+        JsonNode pathsNode = definition.get("paths");
+        if (!(pathsNode instanceof ObjectNode paths))
+        {
+            throw new IllegalStateException("OpenAPI definition is missing its paths object");
+        }
+
+        List<String> postgresPaths = new ArrayList<>();
+        paths.fieldNames().forEachRemaining(path ->
+        {
+            if (isSolutionPath(path))
+            {
+                postgresPaths.add(path);
+            }
+        });
+
+        addSolutionPaths(paths, postgresPaths, "/mongodb", "MongoDB");
+        addSolutionPaths(paths, postgresPaths, "/neo4j", "Neo4j");
+        return definition.toString();
+    }
+
+    private static boolean isSolutionPath(String path)
+    {
+        if (path.startsWith("/api/auth/"))
+        {
+            return true;
+        }
+
+        for (String resource : CRUD_RESOURCES)
+        {
+            if (path.equals("/" + resource) || path.equals("/" + resource + "/{id}"))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void addSolutionPaths(ObjectNode paths, List<String> sourcePaths, String prefix, String solution)
+    {
+        String solutionId = solution.toLowerCase(Locale.ROOT);
+        for (String sourcePath : sourcePaths)
+        {
+            String targetPath = prefix + sourcePath;
+            if (paths.has(targetPath))
+            {
+                continue;
+            }
+
+            ObjectNode copiedPath = paths.get(sourcePath).deepCopy();
+            Iterator<Map.Entry<String, JsonNode>> operations = copiedPath.fields();
+            while (operations.hasNext())
+            {
+                Map.Entry<String, JsonNode> entry = operations.next();
+                String method = entry.getKey();
+                if (!HTTP_METHODS.contains(method) || !(entry.getValue() instanceof ObjectNode operation))
+                {
+                    continue;
+                }
+
+                String operationId = operation.path("operationId").asText(method);
+                String pathId = sourcePath.replaceAll("[^A-Za-z0-9]", "_");
+                operation.put("operationId", operationId + "_" + solutionId + "_" + method + "_" + pathId);
+
+                String suffix = " (" + solution + ")";
+                JsonNode originalTags = operation.get("tags");
+                ArrayNode tags = operation.arrayNode();
+                if (originalTags instanceof ArrayNode tagArray)
+                {
+                    for (JsonNode tag : tagArray)
+                    {
+                        if (tag.isTextual())
+                        {
+                            tags.add(tag.asText() + suffix);
+                        }
+                        else
+                        {
+                            tags.add(tag);
+                        }
+                    }
+                }
+                if (tags.isEmpty())
+                {
+                    tags.add(solution);
+                }
+                operation.set("tags", tags);
+
+                String summary = operation.path("summary").asText("Operation");
+                operation.put("summary", summary + suffix);
+            }
+            paths.set(targetPath, copiedPath);
+        }
     }
 
     private static void unavailable(io.javalin.http.Context ctx)
