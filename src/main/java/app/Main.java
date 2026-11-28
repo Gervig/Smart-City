@@ -13,6 +13,7 @@ import app.nosql.NoSqlSettings;
 import app.populators.StartupPopulator;
 import app.routes.CrudServices;
 import app.routes.Routes;
+import app.security.AuditContext;
 import app.security.daos.UserDAO;
 import app.security.rest.SecurityController;
 import app.security.rest.SecurityRoutes;
@@ -103,6 +104,8 @@ public class Main
                 .exception(ServiceUnavailableException.class, (e, ctx) -> unavailable(ctx))
                 .exception(SessionExpiredException.class, (e, ctx) -> unavailable(ctx))
                 .exception(AuthenticationException.class, (e, ctx) -> unavailable(ctx));
+        // The audit user belongs to one request only (see AuditContext)
+        app.after(ctx -> AuditContext.clear());
 
         Routes.register(app, emf);
         for (Solution solution : solutions)
