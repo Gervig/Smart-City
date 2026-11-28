@@ -865,7 +865,7 @@ Exit code 0 when every count matches. Instead of migrating, the committed dumps 
 
 ### The MongoDB and Neo4j API
 
-All nine resources exist under `/mongodb` and `/neo4j` with the same paths, DTOs, validation, paging (`page`, `size`), filters, sorting (`sort=field,direction`) and role rules as PostgreSQL, including the admin-only salary. Each solution has its own login users: `POST /mongodb/api/auth/login` checks the MongoDB `users` collection, `POST /neo4j/api/auth/login` the `User`/`Role` nodes; the migrated users keep their passwords (`admin` / your `ADMIN_PASSWORD`, `User1` / `Password123`).
+All nine resources exist under `/mongodb` and `/neo4j` with the same paths, DTOs, validation, paging (`page`, `size`), filters, sorting (`sort=field,direction`) and role rules as PostgreSQL, including the admin-only salary. Each solution has its own login users: `POST /mongodb/api/auth/login` checks the MongoDB `users` collection, `POST /neo4j/api/auth/login` the `User`/`Role` nodes; the migrated users keep their passwords (`admin` / your `ADMIN_PASSWORD`, `User1` / `Password123`). Swagger at `/swagger` documents all three database solutions and their CRUD and authentication endpoints.
 
 The controllers only know the `CrudService` interface, so only the data layer differs (`app/mongo`, `app/neo4j`). PostgreSQL's foreign keys and triggers are done in the services: 404 for an unknown reference, 409 when a delete would break one (`ON DELETE RESTRICT`), a deleted housing leaves its residents without one (`SET NULL`), housing capacity, job dates, and the death cleanup of `trg_citizen_post_death_cleanup`. MongoDB also updates its copies when a name changes (a renamed company is renamed in every job). Neo4j writes in one transaction; a standalone MongoDB has no multi-document transactions, so a write that moves an embedded row is two atomic single-document writes.
 
@@ -1040,4 +1040,3 @@ npm run e2e
 | Port 5173 is already in use | Stop the other Vite process; the dev server is configured with `strictPort`. |
 | Playwright tests time out waiting for the page | Check that the backend is up and that the Docker database is running with the schema loaded. |
 | Overpass request fails or times out | The public service may be busy or rate-limiting requests. Retry later, or configure another compatible endpoint with `OVERPASS_URL`. |
-

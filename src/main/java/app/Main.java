@@ -5,6 +5,11 @@ import app.exceptions.ApiException;
 import app.exceptions.NotAuthorizedException;
 import app.exceptions.NotFoundException;
 import app.exceptions.ValidationException;
+import app.mongo.MongoStore;
+import app.mongo.MongoUserStore;
+import app.neo4j.Neo4jStore;
+import app.neo4j.Neo4jUserStore;
+import app.nosql.NoSqlSettings;
 import app.populators.StartupPopulator;
 import app.routes.CrudServices;
 import app.routes.Routes;
@@ -12,6 +17,7 @@ import app.security.AuditContext;
 import app.security.daos.UserDAO;
 import app.security.rest.SecurityController;
 import app.security.rest.SecurityRoutes;
+import app.security.rest.TokenDenylist;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -45,9 +51,24 @@ public class Main
         UserDAO.getInstance(emf);
         StartupPopulator.populate(emf, StartupPopulator.adminPassword());
 
+        NoSqlSettings settings = NoSqlSettings.fromConfig();
+        MongoStore mongoStore = new MongoStore(settings.mongoUri(), settings.mongoDatabase());
+        Neo4jStore neo4jStore = new Neo4jStore(settings.neo4jUri(), settings.neo4jUser(), settings.neo4jPassword());
+        TokenDenylist denylist = TokenDenylist.getInstance();
+
         int port = 7070;
 
-        createApp(emf, new SecurityController()).start(port);
+        Javalin app = createApp(emf, new SecurityController(),
+                new Solution("/mongodb", CrudServices.mongo(mongoStore),
+                        new SecurityController(null, denylist, new MongoUserStore(mongoStore))),
+                new Solution("/neo4j", CrudServices.neo4j(neo4jStore),
+                        new SecurityController(null, denylist, new Neo4jUserStore(neo4jStore))));
+        app.events(events -> events.serverStopping(() ->
+        {
+            mongoStore.close();
+            neo4jStore.close();
+        }));
+        app.start(port);
 
         System.out.println();
         System.out.println("========================================");
@@ -81,7 +102,8 @@ public class Main
                                         .version("1.0.0")
                                         .description("REST API for city data. Protected operations use HS256 JWT bearer tokens."));
                                 definition.withSecurity(security -> security.withBearerAuth("BearerAuth"));
-                                definition.withDefinitionProcessor(Main::addSolutionPaths);
+                                definition.withDefinitionProcessor(
+                                        openApiDefinition -> addSolutionPaths(openApiDefinition, solutions));
                             })));
                     config.registerPlugin(new SwaggerPlugin());
                     config.bundledPlugins.enableRouteOverview("/api/routes");
@@ -120,7 +142,7 @@ public class Main
         return app;
     }
 
-    private static String addSolutionPaths(ObjectNode definition)
+    private static String addSolutionPaths(ObjectNode definition, Solution... solutions)
     {
         JsonNode pathsNode = definition.get("paths");
         if (!(pathsNode instanceof ObjectNode paths))
@@ -137,9 +159,21 @@ public class Main
             }
         });
 
-        addSolutionPaths(paths, postgresPaths, "/mongodb", "MongoDB");
-        addSolutionPaths(paths, postgresPaths, "/neo4j", "Neo4j");
+        for (Solution solution : solutions)
+        {
+            addSolutionPaths(paths, postgresPaths, solution.prefix(), solutionName(solution.prefix()));
+        }
         return definition.toString();
+    }
+
+    private static String solutionName(String prefix)
+    {
+        return switch (prefix)
+        {
+            case "/mongodb" -> "MongoDB";
+            case "/neo4j" -> "Neo4j";
+            default -> prefix;
+        };
     }
 
     private static boolean isSolutionPath(String path)

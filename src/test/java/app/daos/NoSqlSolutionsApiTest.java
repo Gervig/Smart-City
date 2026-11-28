@@ -349,18 +349,32 @@ class NoSqlSolutionsApiTest
     }
 
     @Test
-    @DisplayName("OpenAPI documents CRUD and authentication paths for each NoSQL solution only")
+    @DisplayName("OpenAPI documents CRUD and authentication paths for all configured database solutions")
     void openApiDocumentsSolutionPaths() throws Exception
     {
         JsonNode paths = new ObjectMapper().readTree(given().when().get("/openapi").then().statusCode(200)
                 .extract().asString()).path("paths");
 
-        for (String prefix : List.of("/mongodb", "/neo4j"))
+        List<String> resources = List.of("locations", "families", "housings", "citizens",
+                "citizen-relationships", "institutions", "companies", "education-records", "jobs");
+        for (String prefix : List.of("", "/mongodb", "/neo4j"))
         {
-            assertTrue(paths.has(prefix + "/citizens"));
-            assertTrue(paths.has(prefix + "/citizens/{id}"));
+            for (String resource : resources)
+            {
+                JsonNode collection = paths.path(prefix + "/" + resource);
+                JsonNode item = paths.path(prefix + "/" + resource + "/{id}");
+                assertTrue(collection.has("get"), prefix + " " + resource + " list endpoint");
+                assertTrue(collection.has("post"), prefix + " " + resource + " create endpoint");
+                assertTrue(item.has("get"), prefix + " " + resource + " read endpoint");
+                assertTrue(item.has("put"), prefix + " " + resource + " update endpoint");
+                assertTrue(item.has("delete"), prefix + " " + resource + " delete endpoint");
+            }
             assertTrue(paths.has(prefix + "/api/auth/login"));
             assertTrue(paths.has(prefix + "/api/auth/register"));
+        }
+
+        for (String prefix : List.of("/mongodb", "/neo4j"))
+        {
             assertFalse(paths.has(prefix + "/citizen-details"));
             assertFalse(paths.has(prefix + "/locations/{id}/nearby"));
             assertFalse(paths.has(prefix + "/citizens/{id}/total-salary"));
