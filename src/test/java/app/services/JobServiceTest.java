@@ -67,7 +67,7 @@ class JobServiceTest
     }
 
     @Test
-    @DisplayName("[EP-36] rejects a job without an employer")
+    @DisplayName("[JM-I1] rejects a job without an employer")
     void createNoEmployer()
     {
         // Arrange
@@ -83,7 +83,7 @@ class JobServiceTest
     }
 
     @Test
-    @DisplayName("[EP-37] rejects a job with two employers")
+    @DisplayName("[JM-I2] rejects a job with two employers")
     void createBothEmployers()
     {
         // Arrange
@@ -99,7 +99,7 @@ class JobServiceTest
     }
 
     @Test
-    @DisplayName("[EP-27, BVA-20] rejects a job starting before the citizen was born")
+    @DisplayName("[JD-I2] rejects a job starting before the citizen was born")
     void createBeforeBirth()
     {
         // Arrange
@@ -116,7 +116,7 @@ class JobServiceTest
     }
 
     @Test
-    @DisplayName("[EP-28, BVA-23] rejects a job starting after the citizen died")
+    @DisplayName("[JD-I3] rejects a job starting after the citizen died")
     void createAfterDeath()
     {
         // Arrange
@@ -134,7 +134,7 @@ class JobServiceTest
     }
 
     @Test
-    @DisplayName("[EP-26] persists a valid job")
+    @DisplayName("[JD-V1] persists a valid job")
     void create()
     {
         // Arrange
@@ -167,7 +167,7 @@ class JobServiceTest
 
     @ParameterizedTest
     @ValueSource(strings = {"birth", "death"})
-    @DisplayName("[EP-26, BVA-21, BVA-22] accepts a job starting on the day the citizen was born or died")
+    @DisplayName("[JD-V2, JD-V3] accepts a job starting on the day the citizen was born or died")
     void createOnBirthOrDeathDay(String day)
     {
         // Arrange

@@ -33,7 +33,7 @@ class TokenDenylistTest
     }
 
     @Test
-    @DisplayName("[EP-58] a logged-out token is revoked until it expires")
+    @DisplayName("[TK-I1] a logged-out token is revoked until it expires")
     void revokedUntilExpiry()
     {
         // Arrange
@@ -47,7 +47,7 @@ class TokenDenylistTest
     }
 
     @Test
-    @DisplayName("[EP-60] a token that was never logged out is not revoked")
+    @DisplayName("[TK-V1] a token that was never logged out is not revoked")
     void unknownToken()
     {
         // Arrange
@@ -61,7 +61,7 @@ class TokenDenylistTest
     }
 
     @Test
-    @DisplayName("a null id is never revoked")
+    @DisplayName("[TK-V2] a null id is never revoked")
     void nullId()
     {
         // Arrange
@@ -74,7 +74,7 @@ class TokenDenylistTest
     }
 
     @Test
-    @DisplayName("[EP-59, BVA-47] the entry is removed once the token has expired")
+    @DisplayName("[TK-V3] the entry is removed once the token has expired")
     void removedAfterExpiry()
     {
         // Arrange
@@ -89,7 +89,7 @@ class TokenDenylistTest
     }
 
     @Test
-    @DisplayName("[EP-58, BVA-46] one second before expiry the token is still revoked (boundary)")
+    @DisplayName("[TK-I2] one second before expiry the token is still revoked (boundary)")
     void revokedJustBeforeExpiry()
     {
         // Arrange
@@ -103,7 +103,7 @@ class TokenDenylistTest
     }
 
     @Test
-    @DisplayName("[EP-59] a token that has already expired is not stored")
+    @DisplayName("[TK-V4] a token that has already expired is not stored")
     void alreadyExpired()
     {
         // Arrange
@@ -133,7 +133,7 @@ class TokenDenylistTest
     }
 
     @Test
-    @DisplayName("a missing id or expiry time is rejected")
+    @DisplayName("[TK-I3] a missing id or expiry time is rejected")
     void rejectsNulls()
     {
         // Arrange

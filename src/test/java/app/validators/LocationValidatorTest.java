@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class LocationValidatorTest
 {
     @Test
-    @DisplayName("accepts a location with a name")
+    @DisplayName("[LN-V1] accepts a location with a name")
     void validate()
     {
         // Arrange
@@ -31,7 +31,7 @@ class LocationValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", " ", "  "})
-    @DisplayName("rejects a missing name")
+    @DisplayName("[LN-I1] rejects a missing name")
     void validateBlankName(String name)
     {
         // Arrange
@@ -47,7 +47,7 @@ class LocationValidatorTest
 
     @ParameterizedTest
     @ValueSource(ints = {1, LocationValidator.MAX_NAME_LENGTH})
-    @DisplayName("[EP-69, BVA-56, BVA-57] accepts a name of 1 and of 150 characters")
+    @DisplayName("[LN-V2, LN-V3] accepts a name of 1 and of 150 characters")
     void validateNameLength(int length)
     {
         // Arrange
@@ -58,7 +58,7 @@ class LocationValidatorTest
     }
 
     @Test
-    @DisplayName("[EP-70, BVA-58] rejects a name of 151 characters")
+    @DisplayName("[LN-I2] rejects a name of 151 characters")
     void validateNameTooLong()
     {
         // Arrange
@@ -70,5 +70,21 @@ class LocationValidatorTest
 
         // Assert
         assertEquals("name must be at most 150 characters", exception.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Anna\n", "An\tna", "Anna\0", "Anna\u007F"})
+    @DisplayName("[LN-I3] rejects a name with a control character")
+    void nameWithControlCharacter(String value)
+    {
+        // Arrange
+        LocationRequestDTO request = new LocationRequestDTO(value, null);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> LocationValidator.validate(request));
+
+        // Assert
+        assertEquals("name must not contain control characters", exception.getMessage());
     }
 }

@@ -60,7 +60,7 @@ class CitizenServiceTest
     }
 
     @Test
-    @DisplayName("creates a valid citizen once")
+    @DisplayName("[CH-V1] creates a valid citizen once")
     void create()
     {
         // Arrange
@@ -87,7 +87,7 @@ class CitizenServiceTest
     }
 
     @Test
-    @DisplayName("[EP-02] rejects an invalid citizen before persistence")
+    @DisplayName("[CB-I1] rejects an invalid citizen before persistence")
     void createInvalid()
     {
         // Arrange
@@ -103,7 +103,7 @@ class CitizenServiceTest
     }
 
     @Test
-    @DisplayName("[EP-21, BVA-16] rejects a citizen when housing is full")
+    @DisplayName("[CH-I1] rejects a citizen when housing is full")
     void createHousingFull()
     {
         // Arrange
@@ -121,7 +121,7 @@ class CitizenServiceTest
     }
 
     @Test
-    @DisplayName("[EP-20, BVA-15] accepts a citizen when housing has capacity")
+    @DisplayName("[CH-V2] accepts a citizen when housing has capacity")
     void createHousingAvailable()
     {
         // Arrange
@@ -141,7 +141,7 @@ class CitizenServiceTest
     }
 
     @Test
-    @DisplayName("[EP-22] does not count the updated citizen twice in its current housing")
+    @DisplayName("[CH-V3] does not count the updated citizen twice in its current housing")
     void updateKeepsFullHousing()
     {
         // Arrange
@@ -166,7 +166,7 @@ class CitizenServiceTest
     }
 
     @Test
-    @DisplayName("[EP-10] rejects housing for a deceased citizen")
+    @DisplayName("[CS-I7] rejects housing for a deceased citizen")
     void createDeceasedCitizenWithHousing()
     {
         // Arrange

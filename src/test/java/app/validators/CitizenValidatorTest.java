@@ -29,7 +29,7 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("[EP-01, EP-06] accepts a valid alive citizen")
+    @DisplayName("[CN-V1, CB-V1, CD-V3, CS-V1] accepts a valid alive citizen")
     void validate()
     {
         // Arrange
@@ -40,7 +40,7 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("[EP-04, EP-06] accepts a deceased citizen with a valid death date and no housing")
+    @DisplayName("[CD-V1, CS-V2] accepts a deceased citizen with a valid death date and no housing")
     void validateDeadCitizen()
     {
         // Arrange
@@ -54,7 +54,7 @@ class CitizenValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", " "})
-    @DisplayName("[EP-12] rejects a missing first name")
+    @DisplayName("[CN-I1, CN-I2, CN-I3] rejects a missing first name")
     void validateFirstName(String value)
     {
         // Arrange
@@ -71,7 +71,7 @@ class CitizenValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", " "})
-    @DisplayName("[EP-12] rejects a missing last name")
+    @DisplayName("[CN-I1, CN-I2, CN-I3] rejects a missing last name")
     void validateLastName(String value)
     {
         // Arrange
@@ -87,7 +87,7 @@ class CitizenValidatorTest
 
     @ParameterizedTest
     @ValueSource(ints = {1, CitizenValidator.MAX_NAME_LENGTH})
-    @DisplayName("[EP-11, BVA-06, BVA-07] accepts first and last names of 1 and of 100 characters")
+    @DisplayName("[CN-V3, CN-V4] accepts first and last names of 1 and of 100 characters")
     void validateNameLength(int length)
     {
         // Arrange
@@ -100,7 +100,7 @@ class CitizenValidatorTest
 
     @ParameterizedTest
     @ValueSource(strings = {"firstName", "lastName"})
-    @DisplayName("[EP-13, BVA-08] rejects a first or last name of 101 characters")
+    @DisplayName("[CN-I4] rejects a first or last name of 101 characters")
     void validateNameTooLong(String field)
     {
         // Arrange
@@ -127,7 +127,7 @@ class CitizenValidatorTest
 
     @ParameterizedTest
     @MethodSource("birthDates")
-    @DisplayName("[EP-01, EP-02, BVA-01, BVA-02] allows today but rejects a future birth date")
+    @DisplayName("[CB-V1, CB-I1] allows today but rejects a future birth date")
     void validateBirthDate(LocalDate date, boolean invalid)
     {
         // Arrange
@@ -147,7 +147,7 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("[EP-03] rejects a missing birth date")
+    @DisplayName("[CB-I2] rejects a missing birth date")
     void validateMissingBirthDate()
     {
         // Arrange
@@ -172,7 +172,7 @@ class CitizenValidatorTest
 
     @ParameterizedTest
     @MethodSource("deathDates")
-    @DisplayName("[EP-04, EP-05, BVA-03, BVA-04] validates death date against birth date")
+    @DisplayName("[CD-V1, CD-I1] validates death date against birth date")
     void validateDeathDate(LocalDate date, boolean invalid) {
         // Arrange
         LocalDate birthDate = LocalDate.now().minusYears(20);
@@ -191,7 +191,7 @@ class CitizenValidatorTest
 
     @ParameterizedTest
     @ValueSource(strings = {"alive", "deceased"})
-    @DisplayName("[EP-06] accepts allowed status values when dates agree")
+    @DisplayName("[CB-V2, CS-V1, CS-V2] accepts allowed status values when dates agree")
     void validateStatus(String status)
     {
         // Arrange
@@ -206,7 +206,7 @@ class CitizenValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"unknown", "", " "})
-    @DisplayName("[EP-07] rejects an invalid status")
+    @DisplayName("[CS-I1, CS-I2] rejects an invalid status")
     void validateInvalidStatus(String status)
     {
         // Arrange
@@ -221,7 +221,7 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("[EP-08] requires a living citizen to have no death date")
+    @DisplayName("[CS-I5] requires a living citizen to have no death date")
     void validateAliveDeathDate()
     {
         // Arrange
@@ -237,7 +237,7 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("[EP-09] requires a deceased citizen to have a death date")
+    @DisplayName("[CS-I6] requires a deceased citizen to have a death date")
     void validateDeadDeathDate()
     {
         // Arrange
@@ -253,7 +253,7 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("[EP-10] rejects housing for a deceased citizen")
+    @DisplayName("[CS-I7] rejects housing for a deceased citizen")
     void validateDeadHousing()
     {
         // Arrange
@@ -269,7 +269,7 @@ class CitizenValidatorTest
     }
 
     @Test
-    @DisplayName("[EP-04, BVA-05] accepts a death date after birth")
+    @DisplayName("[CD-V2] accepts a death date after birth")
     void validateDeathDateAfterBirth()
     {
         // Arrange
@@ -278,5 +278,49 @@ class CitizenValidatorTest
 
         // Act / Assert
         assertDoesNotThrow(() -> CitizenValidator.validate(request));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Søren", "Anne-Marie", "O'Brien", "Jean Luc"})
+    @DisplayName("[CN-V2] accepts names with Danish letters, hyphens, apostrophes and spaces")
+    void validNameCharacters(String name)
+    {
+        // Arrange
+        CitizenRequestDTO request = request(name, name, LocalDate.now(), null, "alive", null);
+
+        // Act / Assert
+        assertDoesNotThrow(() -> CitizenValidator.validate(request));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Anna\n", "An\tna", "Anna\0", "Anna\u007F"})
+    @DisplayName("[CN-I5] rejects a first name with a control character")
+    void nameWithControlCharacter(String value)
+    {
+        // Arrange
+        CitizenRequestDTO request = request(value, "Smith", LocalDate.now(), null, "alive", null);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> CitizenValidator.validate(request));
+
+        // Assert
+        assertEquals("firstName must not contain control characters", exception.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Alive", "ALIVE", "alive ", " deceased"})
+    @DisplayName("[CS-I3, CS-I4] rejects a status in the wrong case or with surrounding spaces")
+    void statusWrongCaseOrSpaces(String value)
+    {
+        // Arrange
+        CitizenRequestDTO request = request("Alex", "Smith", LocalDate.now(), null, value, null);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> CitizenValidator.validate(request));
+
+        // Assert
+        assertEquals("status must be one of alive, deceased", exception.getMessage());
     }
 }

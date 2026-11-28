@@ -18,7 +18,7 @@ class CredentialsValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", " "})
-    @DisplayName("[EP-55] login rejects a missing username")
+    @DisplayName("[UN-I1] login rejects a missing username")
     void loginMissingUsername(String username)
     {
         // Act
@@ -32,7 +32,7 @@ class CredentialsValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", " "})
-    @DisplayName("[EP-52] login rejects a missing password")
+    @DisplayName("[PW-I3] login rejects a missing password")
     void loginMissingPassword(String password)
     {
         // Act
@@ -45,7 +45,7 @@ class CredentialsValidatorTest
 
     @ParameterizedTest
     @CsvSource({"1, 8", "255, 8", "5, 9", "5, 64"})
-    @DisplayName("[EP-50, EP-53, BVA-41, BVA-42, BVA-43, BVA-44] registration accepts usernames of 1 to 255 characters and passwords of 8 or more")
+    @DisplayName("[UN-V1, UN-V2, UN-V3, PW-V1, PW-V2, PW-V3] registration accepts usernames of 1 to 255 characters and passwords of 8 or more")
     void registrationValidLengths(int usernameLength, int passwordLength)
     {
         // Arrange
@@ -58,7 +58,7 @@ class CredentialsValidatorTest
 
     @ParameterizedTest
     @ValueSource(ints = {1, 7})
-    @DisplayName("[EP-51, BVA-40] registration rejects a password shorter than 8 characters")
+    @DisplayName("[PW-I1, PW-I2] registration rejects a password shorter than 8 characters")
     void registrationShortPassword(int passwordLength)
     {
         // Arrange
@@ -74,7 +74,7 @@ class CredentialsValidatorTest
 
     @ParameterizedTest
     @ValueSource(ints = {256, 1000})
-    @DisplayName("[EP-54, BVA-45] registration rejects a username longer than 255 characters")
+    @DisplayName("[UN-I2, UN-I3] registration rejects a username longer than 255 characters")
     void registrationLongUsername(int usernameLength)
     {
         // Arrange

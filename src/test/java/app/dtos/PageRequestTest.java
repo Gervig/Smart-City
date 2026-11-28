@@ -36,7 +36,7 @@ class PageRequestTest
 
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 99, PageRequest.MAX_SIZE})
-    @DisplayName("[EP-41, BVA-31, BVA-32, BVA-33, BVA-34] accepts a page size from 1 to 100")
+    @DisplayName("[PS-V1, PS-V2, PS-V3, PS-V4] accepts a page size from 1 to 100")
     void validSize(int size)
     {
         // Act
@@ -48,7 +48,7 @@ class PageRequestTest
 
     @ParameterizedTest
     @ValueSource(ints = {Integer.MIN_VALUE, -1, 0, 101, Integer.MAX_VALUE})
-    @DisplayName("[EP-42, EP-43, BVA-30, BVA-35] rejects a page size below 1 or above 100")
+    @DisplayName("[PS-I1, PS-I2, PS-I3, PS-I4, PS-I5] rejects a page size below 1 or above 100")
     void invalidSize(int size)
     {
         // Act
@@ -61,7 +61,7 @@ class PageRequestTest
 
     @ParameterizedTest
     @ValueSource(ints = {0, 1, 1000})
-    @DisplayName("[EP-44, BVA-37] accepts page 0 and higher")
+    @DisplayName("[PP-V1, PP-V2, PP-V3] accepts page 0 and higher")
     void validPage(int page)
     {
         // Act
@@ -73,7 +73,7 @@ class PageRequestTest
 
     @ParameterizedTest
     @ValueSource(ints = {Integer.MIN_VALUE, -1})
-    @DisplayName("[EP-45, BVA-36] rejects a negative page")
+    @DisplayName("[PP-I1, PP-I2] rejects a negative page")
     void negativePage(int page)
     {
         // Act
@@ -86,7 +86,7 @@ class PageRequestTest
 
     @ParameterizedTest
     @CsvSource({"21474836, 100, false", "21474837, 100, true", "2147483647, 1, false"})
-    @DisplayName("[EP-46, BVA-38, BVA-39] rejects a page whose offset (page * size) does not fit in an int")
+    @DisplayName("[PP-V4, PP-V5, PP-I3] rejects a page whose offset (page * size) does not fit in an int")
     void offsetOverflow(int page, int size, boolean tooLarge)
     {
         // Act / Assert
@@ -104,7 +104,7 @@ class PageRequestTest
 
     @ParameterizedTest
     @CsvSource({"asc, asc", "desc, desc", "ASC, asc", "Desc, desc"})
-    @DisplayName("[EP-47] accepts asc and desc in any case and stores them in lower case")
+    @DisplayName("[PO-V1, PO-V2, PO-V3] accepts asc and desc in any case and stores them in lower case")
     void validSortDirection(String direction, String expected)
     {
         // Act
@@ -116,7 +116,7 @@ class PageRequestTest
 
     @ParameterizedTest
     @ValueSource(strings = {"sideways", "ascending", "up"})
-    @DisplayName("[EP-48] rejects an unsupported sort direction")
+    @DisplayName("[PO-I1] rejects an unsupported sort direction")
     void invalidSortDirection(String direction)
     {
         // Act
@@ -130,7 +130,7 @@ class PageRequestTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", " "})
-    @DisplayName("[EP-49] falls back to sorting by id ascending when sort field and direction are missing")
+    @DisplayName("[PO-V4] falls back to sorting by id ascending when sort field and direction are missing")
     void missingSortFallsBack(String value)
     {
         // Act

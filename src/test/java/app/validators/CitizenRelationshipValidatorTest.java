@@ -10,6 +10,7 @@ import org.junit.jupiter.params.provider.NullSource;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -25,7 +26,7 @@ class CitizenRelationshipValidatorTest
     }
 
     @Test
-    @DisplayName("accepts a valid relationship")
+    @DisplayName("[RI-V1, RT-V2, RD-V1] accepts a valid relationship")
     void validate()
     {
         // Arrange
@@ -37,7 +38,7 @@ class CitizenRelationshipValidatorTest
     }
 
     @Test
-    @DisplayName("rejects a missing first citizen")
+    @DisplayName("[RI-I1] rejects a missing first citizen")
     void validateMissingCitizenId1()
     {
         // Arrange
@@ -52,7 +53,7 @@ class CitizenRelationshipValidatorTest
     }
 
     @Test
-    @DisplayName("rejects a missing second citizen")
+    @DisplayName("[RI-I2] rejects a missing second citizen")
     void validateMissingCitizenId2()
     {
         // Arrange
@@ -67,7 +68,7 @@ class CitizenRelationshipValidatorTest
     }
 
     @Test
-    @DisplayName("rejects the same citizen twice")
+    @DisplayName("[RI-I3] rejects the same citizen twice")
     void validateSameCitizen()
     {
         // Arrange
@@ -83,7 +84,7 @@ class CitizenRelationshipValidatorTest
 
     @ParameterizedTest
     @ValueSource(strings = {"parent_child", "marriage"})
-    @DisplayName("accepts supported relationship types")
+    @DisplayName("[RT-V1, RT-V2, RD-V2] accepts supported relationship types")
     void validateRelationshipType(String type)
     {
         // Arrange
@@ -94,7 +95,7 @@ class CitizenRelationshipValidatorTest
     }
 
     @Test
-    @DisplayName("rejects an unsupported relationship type")
+    @DisplayName("[RT-I1] rejects an unsupported relationship type")
     void validateInvalidRelationshipType()
     {
         // Arrange
@@ -111,7 +112,7 @@ class CitizenRelationshipValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", " "})
-    @DisplayName("rejects a missing relationship type")
+    @DisplayName("[RT-I2] rejects a missing relationship type")
     void validateMissingRelationshipType(String type)
     {
         // Arrange
@@ -126,7 +127,7 @@ class CitizenRelationshipValidatorTest
     }
 
     @Test
-    @DisplayName("rejects a missing start date")
+    @DisplayName("[RD-I1] rejects a missing start date")
     void validateMissingStartDate()
     {
         // Arrange
@@ -141,7 +142,7 @@ class CitizenRelationshipValidatorTest
     }
 
     @Test
-    @DisplayName("rejects an end date before the start date")
+    @DisplayName("[RD-I2] rejects an end date before the start date")
     void validateEndDate()
     {
         // Arrange
@@ -154,5 +155,21 @@ class CitizenRelationshipValidatorTest
 
         // Assert
         assertTrue(exception.getMessage().startsWith("endDate"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Marriage", "MARRIAGE", "parent-child", "marriage "})
+    @DisplayName("[RT-I3] rejects a relationship type in the wrong case, spelling or with surrounding spaces")
+    void relationshipTypeWrongCaseOrSpelling(String value)
+    {
+        // Arrange
+        CitizenRelationshipRequestDTO request = request(1L, 2L, value, LocalDate.now(), null);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> CitizenRelationshipValidator.validate(request));
+
+        // Assert
+        assertEquals("relationshipType must be one of parent_child, marriage", exception.getMessage());
     }
 }

@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class FamilyValidatorTest
 {
     @Test
-    @DisplayName("accepts a family name")
+    @DisplayName("[FN-V1] accepts a family name")
     void validate()
     {
         // Arrange
@@ -31,7 +31,7 @@ class FamilyValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", " ", "  "})
-    @DisplayName("rejects a missing family name")
+    @DisplayName("[FN-I1] rejects a missing family name")
     void validateBlankFamilyName(String familyName)
     {
         // Arrange
@@ -47,7 +47,7 @@ class FamilyValidatorTest
 
     @ParameterizedTest
     @ValueSource(ints = {1, FamilyValidator.MAX_FAMILY_NAME_LENGTH})
-    @DisplayName("[EP-69, BVA-59, BVA-60] accepts a family name of 1 and of 100 characters")
+    @DisplayName("[FN-V2, FN-V3] accepts a family name of 1 and of 100 characters")
     void validateFamilyNameLength(int length)
     {
         // Arrange
@@ -58,7 +58,7 @@ class FamilyValidatorTest
     }
 
     @Test
-    @DisplayName("[EP-70, BVA-61] rejects a family name of 101 characters")
+    @DisplayName("[FN-I2] rejects a family name of 101 characters")
     void validateFamilyNameTooLong()
     {
         // Arrange
@@ -70,5 +70,21 @@ class FamilyValidatorTest
 
         // Assert
         assertEquals("familyName must be at most 100 characters", exception.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Anna\n", "An\tna", "Anna\0", "Anna\u007F"})
+    @DisplayName("[FN-I3] rejects a family name with a control character")
+    void familyNameWithControlCharacter(String value)
+    {
+        // Arrange
+        FamilyRequestDTO request = new FamilyRequestDTO(value);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> FamilyValidator.validate(request));
+
+        // Assert
+        assertEquals("familyName must not contain control characters", exception.getMessage());
     }
 }

@@ -189,7 +189,7 @@ class NearbyPlacesServiceTest
 
     @ParameterizedTest
     @CsvSource({"true,false", "false,true"})
-    @DisplayName("[EP-66] rejects a location missing either coordinate")
+    @DisplayName("[NC-I4] rejects a location missing either coordinate")
     void getNearbyMissingCoordinates(boolean latitudeMissing, boolean longitudeMissing)
     {
         // Arrange
@@ -211,13 +211,14 @@ class NearbyPlacesServiceTest
                 arguments(90.0, 0.0, true), arguments(-90.0, 0.0, true),
                 arguments(90.01, 0.0, false), arguments(-90.01, 0.0, false),
                 arguments(0.0, 180.0, true), arguments(0.0, -180.0, true),
-                arguments(0.0, 180.01, false), arguments(0.0, -180.01, false)
+                arguments(0.0, 180.01, false), arguments(0.0, -180.01, false),
+                arguments(Double.NaN, 0.0, false), arguments(0.0, Double.POSITIVE_INFINITY, false)
         );
     }
 
     @ParameterizedTest
     @MethodSource("coordinates")
-    @DisplayName("[EP-64, EP-65, BVA-52, BVA-53, BVA-54, BVA-55] accepts inclusive coordinate boundaries and rejects out-of-range values")
+    @DisplayName("[NC-V1, NC-V2, NC-I1, NC-I2, NC-I3] accepts inclusive coordinate boundaries and rejects out-of-range values")
     void getNearbyCoordinates(double latitude, double longitude, boolean valid)
     {
         // Arrange
@@ -239,7 +240,7 @@ class NearbyPlacesServiceTest
 
     @ParameterizedTest
     @CsvSource({"0,false", "1,true", "5000,true", "5001,false"})
-    @DisplayName("[EP-61, EP-62, EP-63, BVA-48, BVA-49, BVA-50, BVA-51] checks inclusive radius boundaries")
+    @DisplayName("[NR-V1, NR-V2, NR-I1, NR-I2] checks inclusive radius boundaries")
     void getNearbyRadius(int radius, boolean valid)
     {
         // Arrange
@@ -259,7 +260,7 @@ class NearbyPlacesServiceTest
 
     @ParameterizedTest
     @ValueSource(strings = {"hospital", "school", "college", "pharmacy", "restaurant", "cafe", "library", "bank"})
-    @DisplayName("[EP-67] accepts each whitelisted amenity")
+    @DisplayName("[NA-V1] accepts each whitelisted amenity")
     void getNearbyAmenity(String amenity)
     {
         // Arrange
@@ -271,7 +272,7 @@ class NearbyPlacesServiceTest
 
     @ParameterizedTest
     @MethodSource("invalidAmenities")
-    @DisplayName("[EP-68] rejects a missing, unknown or injected amenity")
+    @DisplayName("[NA-I1, NA-I2, NA-I3, NA-I4] rejects a missing, unknown or injected amenity")
     void getNearbyInvalidAmenity(String amenity)
     {
         // Arrange / Act
