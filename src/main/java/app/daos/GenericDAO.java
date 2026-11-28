@@ -51,8 +51,8 @@ public class GenericDAO<T>
     }
 
     /**
-     * Starts a write transaction and tells PostgreSQL which API user makes it, so the audit triggers
-     * (SQL/audit/09_audit_log.sql) record the person and not only the database user smartcity_app.
+     * Starts a write transaction and tells PostgreSQL which API user makes it, so the audit trigger
+     * (SQL/audit/09_citizen_status_audit.sql) records the person and not only the database user smartcity_app.
      */
     private static void begin(EntityManager em)
     {

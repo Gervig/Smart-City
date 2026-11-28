@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,8 +30,8 @@ import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Covers requirement(s): the final project's auditing, end to end: a change made through the API is logged with the
- * API user who made it (not only the database user), because GenericDAO passes it to the trigger.
+ * Covers requirement(s): the final project's auditing, end to end: a PUT that changes a citizen's status is logged
+ * with the API user who made it (not only the database user), because GenericDAO passes it to the trigger.
  */
 class AuditApiTest
 {
@@ -44,7 +45,7 @@ class AuditApiTest
     static void startApp() throws Exception
     {
         emf = HibernateConfig.getEntityManagerFactoryForTest();
-        String audit = Files.readString(Path.of("SQL/audit/09_audit_log.sql"));
+        String audit = Files.readString(Path.of("SQL/audit/09_citizen_status_audit.sql"));
         try (EntityManager em = emf.createEntityManager())
         {
             em.getTransaction().begin();
@@ -66,57 +67,77 @@ class AuditApiTest
     }
 
     @Test
-    @DisplayName("create, update and delete through the API are logged with the API user")
-    void apiChangesAreLoggedWithTheUser()
+    @DisplayName("PUT /citizens/{id} that makes a citizen deceased is logged with the API user")
+    void statusChangeThroughTheApi()
     {
         // Arrange
         String user = login("User1", "Password123");
-
-        // Act
-        int id = given().header("Authorization", "Bearer " + user).contentType(ContentType.JSON)
+        int family = given().header("Authorization", "Bearer " + user).contentType(ContentType.JSON)
                 .body(Map.of("familyName", "Audited")).when().post("/families")
                 .then().statusCode(201).extract().path("id");
+        int citizen = given().header("Authorization", "Bearer " + user).contentType(ContentType.JSON)
+                .body(citizen(family, "alive", null)).when().post("/citizens")
+                .then().statusCode(201).extract().path("id");
+
+        // Act
         given().header("Authorization", "Bearer " + user).contentType(ContentType.JSON)
-                .body(Map.of("familyName", "Audited Again")).when().put("/families/" + id).then().statusCode(200);
-        given().header("Authorization", "Bearer " + login("admin", "AdminPassword123"))
-                .when().delete("/families/" + id).then().statusCode(204);
+                .body(citizen(family, "deceased", "2024-05-01")).when().put("/citizens/" + citizen)
+                .then().statusCode(200);
 
         // Assert
-        assertEquals(List.of("INSERT User1", "UPDATE User1", "DELETE admin"), history(id));
+        assertEquals(List.of("alive -> deceased | 2024-05-01 | User1"), history(citizen));
     }
 
     @Test
-    @DisplayName("a change without a logged-in API user has no app user")
-    void directChangeHasNoAppUser()
+    @DisplayName("a PUT that keeps the status is not logged")
+    void otherChangesNotLogged()
     {
         // Arrange
-        long id;
-        try (EntityManager em = emf.createEntityManager())
-        {
-            em.getTransaction().begin();
+        String admin = login("admin", "AdminPassword123");
+        int family = given().header("Authorization", "Bearer " + admin).contentType(ContentType.JSON)
+                .body(Map.of("familyName", "Unchanged")).when().post("/families")
+                .then().statusCode(201).extract().path("id");
+        int citizen = given().header("Authorization", "Bearer " + admin).contentType(ContentType.JSON)
+                .body(citizen(family, "alive", null)).when().post("/citizens")
+                .then().statusCode(201).extract().path("id");
+        Map<String, Object> renamed = citizen(family, "alive", null);
+        renamed.put("firstName", "Renamed");
 
-            // Act
-            id = ((Number) em.createNativeQuery("INSERT INTO family (family_name) VALUES ('Direct') RETURNING id")
-                    .getSingleResult()).longValue();
-            em.getTransaction().commit();
-        }
+        // Act
+        given().header("Authorization", "Bearer " + admin).contentType(ContentType.JSON)
+                .body(renamed).when().put("/citizens/" + citizen).then().statusCode(200);
 
         // Assert
-        assertEquals(List.of("INSERT null"), history(id));
+        assertEquals(List.of(), history(citizen));
     }
 
-    private static List<String> history(long familyId)
+    private static Map<String, Object> citizen(int familyId, String status, String deathDate)
+    {
+        Map<String, Object> body = new HashMap<>();
+        body.put("firstName", "Anna");
+        body.put("lastName", "Jensen");
+        body.put("birthDate", "1950-05-17");
+        body.put("deathDate", deathDate);
+        body.put("status", status);
+        body.put("gender", "female");
+        body.put("familyId", familyId);
+        return body;
+    }
+
+    private static List<String> history(long citizenId)
     {
         List<String> rows = new ArrayList<>();
         try (EntityManager em = emf.createEntityManager())
         {
             em.unwrap(Session.class).doWork(connection ->
             {
-                ResultSet rs = connection.createStatement().executeQuery("SELECT operation, app_user FROM audit_log "
-                        + "WHERE table_name = 'family' AND row_id = " + familyId + " ORDER BY id");
+                ResultSet rs = connection.createStatement().executeQuery("SELECT old_status, new_status, "
+                        + "new_death_date, app_user FROM citizen_status_audit WHERE citizen_id = " + citizenId
+                        + " ORDER BY id");
                 while (rs.next())
                 {
-                    rows.add(rs.getString(1) + " " + rs.getString(2));
+                    rows.add(rs.getString(1) + " -> " + rs.getString(2) + " | " + rs.getString(3) + " | "
+                            + rs.getString(4));
                 }
             });
         }

@@ -3,7 +3,7 @@ package app.security;
 import jakarta.persistence.EntityManager;
 
 /**
- * Who is making the current request, for the PostgreSQL audit log (SQL/audit/09_audit_log.sql).
+ * Who is making the current request, for the PostgreSQL audit log (SQL/audit/09_citizen_status_audit.sql).
  * <p>
  * The backend always connects as the same database user (smartcity_app), so the trigger cannot tell API users apart
  * by itself. The security filter stores the logged-in username here for the request, and every write transaction in
