@@ -11,6 +11,8 @@ import app.routes.CrudServices;
 import app.security.rest.SecurityController;
 import app.security.rest.TokenDenylist;
 import app.security.rest.TokenSettings;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.javalin.Javalin;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -46,6 +48,9 @@ import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Covers requirement(s): the final project's "the document and graph database solutions must support the same core
@@ -341,6 +346,50 @@ class NoSqlSolutionsApiTest
         given().when().get("/citizens").then().statusCode(401);
         given().when().get("/mongodb/citizens").then().statusCode(401);
         given().when().get("/neo4j/citizens").then().statusCode(401);
+    }
+
+    @Test
+    @DisplayName("OpenAPI documents CRUD and authentication paths for all configured database solutions")
+    void openApiDocumentsSolutionPaths() throws Exception
+    {
+        JsonNode paths = new ObjectMapper().readTree(given().when().get("/openapi").then().statusCode(200)
+                .extract().asString()).path("paths");
+
+        List<String> resources = List.of("locations", "families", "housings", "citizens",
+                "citizen-relationships", "institutions", "companies", "education-records", "jobs");
+        for (String prefix : List.of("", "/mongodb", "/neo4j"))
+        {
+            for (String resource : resources)
+            {
+                JsonNode collection = paths.path(prefix + "/" + resource);
+                JsonNode item = paths.path(prefix + "/" + resource + "/{id}");
+                assertTrue(collection.has("get"), prefix + " " + resource + " list endpoint");
+                assertTrue(collection.has("post"), prefix + " " + resource + " create endpoint");
+                assertTrue(item.has("get"), prefix + " " + resource + " read endpoint");
+                assertTrue(item.has("put"), prefix + " " + resource + " update endpoint");
+                assertTrue(item.has("delete"), prefix + " " + resource + " delete endpoint");
+            }
+            assertTrue(paths.has(prefix + "/api/auth/login"));
+            assertTrue(paths.has(prefix + "/api/auth/register"));
+        }
+
+        for (String prefix : List.of("/mongodb", "/neo4j"))
+        {
+            assertFalse(paths.has(prefix + "/citizen-details"));
+            assertFalse(paths.has(prefix + "/locations/{id}/nearby"));
+            assertFalse(paths.has(prefix + "/citizens/{id}/total-salary"));
+            assertFalse(paths.has(prefix + "/api/admin/seed/locations"));
+        }
+
+        JsonNode postgresList = paths.path("/citizens").path("get");
+        JsonNode mongoList = paths.path("/mongodb/citizens").path("get");
+        JsonNode neo4jList = paths.path("/neo4j/citizens").path("get");
+        assertNotEquals(postgresList.path("operationId").asText(), mongoList.path("operationId").asText());
+        assertNotEquals(mongoList.path("operationId").asText(), neo4jList.path("operationId").asText());
+        assertTrue(mongoList.path("summary").asText().endsWith(" (MongoDB)"));
+        assertTrue(neo4jList.path("summary").asText().endsWith(" (Neo4j)"));
+        assertTrue(mongoList.path("tags").get(0).asText().endsWith(" (MongoDB)"));
+        assertTrue(neo4jList.path("tags").get(0).asText().endsWith(" (Neo4j)"));
     }
 
     // ---------- a small city per test, made through the API ----------
