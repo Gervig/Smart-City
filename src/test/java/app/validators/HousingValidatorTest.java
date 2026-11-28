@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -18,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class HousingValidatorTest
 {
     @Test
-    @DisplayName("accepts a valid housing request")
+    @DisplayName("[HC-V1, HT-V1] accepts a valid housing request")
     void validate()
     {
         // Arrange
@@ -29,8 +30,8 @@ class HousingValidatorTest
     }
 
     @ParameterizedTest
-    @CsvSource({"house,1", "apartment,1", "house,2"})
-    @DisplayName("accepts allowed housing types and capacities")
+    @CsvSource({"house,1", "apartment,1", "house,2", "house,9999", "house,10000"})
+    @DisplayName("[HC-V1, HC-V2, HC-V3, HC-V4, HT-V1, HT-V2] accepts allowed housing types and capacities from 1 to 10000")
     void validateAllowedValues(String type, int capacity)
     {
         // Arrange
@@ -43,7 +44,7 @@ class HousingValidatorTest
     // [CHANGED] Added capacity above MAX_CAPACITY (10001) to cover the upper-bound rejection branch
     @ParameterizedTest
     @CsvSource({"house,0,capacity", "house,-1,capacity", "house,10001,capacity", "villa,1,housingType", "'',1,housingType"})
-    @DisplayName("rejects invalid type or capacity")
+    @DisplayName("[HC-I1, HC-I2, HC-I3, HT-I1, HT-I2] rejects invalid type or capacity")
     void validateInvalidValues(String type, int capacity, String field)
     {
         // Arrange
@@ -60,7 +61,7 @@ class HousingValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {" "})
-    @DisplayName("rejects null and blank housing types")
+    @DisplayName("[HT-I3] rejects null and blank housing types")
     void validateMissingHousingType(String type)
     {
         // Arrange
@@ -72,5 +73,21 @@ class HousingValidatorTest
 
         // Assert
         assertTrue(exception.getMessage().startsWith("housingType"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"House", "APARTMENT", "house "})
+    @DisplayName("[HT-I4, HT-I5] rejects a housing type in the wrong case or with surrounding spaces")
+    void typeWrongCaseOrSpaces(String value)
+    {
+        // Arrange
+        HousingRequestDTO request = new HousingRequestDTO(1L, value, 1);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> HousingValidator.validate(request));
+
+        // Assert
+        assertEquals("housingType must be one of house, apartment", exception.getMessage());
     }
 }
