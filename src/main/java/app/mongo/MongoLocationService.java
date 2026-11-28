@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Locations. A location is also copied into every housing, company and institution at that place, so a change is
- * written to those copies too, and a location that is still used cannot be deleted.
+ - Locations. A location is also copied into every housing, company and institution at that place, so a change is
+ - written to those copies too, and a location that is still used cannot be deleted.
  */
 public class MongoLocationService extends MongoCollectionService<LocationDTO, LocationRequestDTO>
 {
@@ -28,7 +28,13 @@ public class MongoLocationService extends MongoCollectionService<LocationDTO, Lo
     @Override
     protected LocationDTO toDTO(Document d)
     {
-        return new LocationDTO(MongoStore.id(d.get("_id")), d.getString("name"), d.getString("streetAddress"));
+        return new LocationDTO(
+                MongoStore.id(d.get("_id")),
+                d.getString("name"),
+                d.getString("streetAddress"),
+                d.getDouble("latitude"),
+                d.getDouble("longitude")
+        );
     }
 
     @Override

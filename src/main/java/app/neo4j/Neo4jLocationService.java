@@ -38,13 +38,22 @@ public class Neo4jLocationService extends Neo4jCrudService<LocationDTO, Location
     @Override
     protected String projection()
     {
-        return "n.id AS id, n.name AS name, n.streetAddress AS streetAddress";
+        return "n.id AS id, n.name AS name, n.streetAddress AS streetAddress, n.latitude AS latitude, n.longitude AS longitude";
     }
 
     @Override
     protected LocationDTO toDTO(Record r)
     {
-        return new LocationDTO(r.get("id").asLong(), Neo4jStore.text(r.get("name")), Neo4jStore.text(r.get("streetAddress")));
+        Double latitude = r.get("latitude").isNull() ? null : r.get("latitude").asDouble();
+        Double longitude = r.get("longitude").isNull() ? null : r.get("longitude").asDouble();
+
+        return new LocationDTO(
+                r.get("id").asLong(),
+                Neo4jStore.text(r.get("name")),
+                Neo4jStore.text(r.get("streetAddress")),
+                latitude,
+                longitude
+        );
     }
 
     @Override
