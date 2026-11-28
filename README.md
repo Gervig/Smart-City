@@ -48,6 +48,7 @@ cd docker
 docker compose up -d --build
 docker compose exec db psql -U postgres -d smart_city -f /sql/schema/database_schema.sql
 docker compose exec db psql -U postgres -d smart_city -f /sql/users/08_users.sql
+docker compose exec db psql -U postgres -d smart_city -f /sql/audit/09_citizen_status_audit.sql
 cd ..
 ```
 
@@ -154,9 +155,17 @@ docker compose up -d --build
 ```text
 docker compose exec db psql -U postgres -d smart_city -f /sql/schema/database_schema.sql
 docker compose exec db psql -U postgres -d smart_city -f /sql/users/08_users.sql
+docker compose exec db psql -U postgres -d smart_city -f /sql/audit/09_citizen_status_audit.sql
 ```
 
 The schema comes from `SQL/schema/database_schema.sql`, not from Hibernate: the application only checks it on startup (`hibernate.hbm2ddl.auto` is `validate`), so it reports `missing table` if the schema was not loaded. `08_users.sql` creates four database users with different privileges (`smartcity_app` for the backend, `smartcity_admin`, `smartcity_readonly` and `smartcity_restricted`); the table of users and how to show their privileges are in [`docker/README.md`](docker/README.md#users).
+
+`09_citizen_status_audit.sql` adds auditing of the most important change in the city: a citizen's status. A trigger on `citizen` (`AFTER UPDATE … WHEN (OLD.status IS DISTINCT FROM NEW.status)`) writes every status change, for example `alive` → `deceased` through `PUT /citizens/{id}`, to the table `citizen_status_audit`: citizen, old and new status, old and new death date, the database user, the logged-in API user and the time. It also catches a status that the schema's own trigger `update_citizen_status` sets from the death date, and it skips updates that leave the status as it is. The API user comes from the backend: `GenericDAO` passes it to each transaction with `set_config('smartcity.app_user', …, true)` (`AuditContext`). The log is append-only (a trigger refuses `UPDATE`, `DELETE` and `TRUNCATE`, also for `smartcity_admin`), `smartcity_app` cannot read or change it (only the `SECURITY DEFINER` trigger function writes it), and `smartcity_restricted` cannot read it. Example: "who declared citizen 42 deceased?"
+
+```sql
+SELECT changed_at, old_status, new_status, new_death_date, app_user, db_user
+FROM citizen_status_audit WHERE citizen_id = 42 ORDER BY id;
+```
 
 **3. Stop or start over:**
 

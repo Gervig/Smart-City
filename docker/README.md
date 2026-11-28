@@ -47,6 +47,7 @@ Run them from the `docker` folder, in this order.
 2. **The database users and their privileges:**
    ```powershell
    docker compose exec db psql -U postgres -d smart_city -f /sql/users/08_users.sql
+   docker compose exec db psql -U postgres -d smart_city -f /sql/audit/09_citizen_status_audit.sql
    ```
 3. **Point the backend at the application user.** In `src/main/resources/config.properties` set
    `DB_USERNAME=smartcity_app` and `DB_PASSWORD=app-dev-password` (and `DB_NAME=smart_city`). Start the backend; it
