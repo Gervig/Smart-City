@@ -40,7 +40,7 @@ class HousingServiceTest
     }
 
     @Test
-    @DisplayName("rejects invalid capacity before looking up location")
+    @DisplayName("[HC-I1] rejects invalid capacity before looking up location")
     void createInvalidCapacity()
     {
         // Arrange

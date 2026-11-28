@@ -18,6 +18,7 @@ class UserTest
 
     // Equivalence partitions: the exact password (valid) versus near misses and empty (invalid)
     @ParameterizedTest(name = "stored Password123, attempt \"{0}\" -> {1}")
+    @DisplayName("[PL-V1, PL-I1, PL-I2, PL-I3, PL-I4] login accepts only the exact stored password")
     @CsvSource({
             "Password123,   true",   // exact match
             "password123,   false", // wrong capitalisation

@@ -21,7 +21,7 @@ public final class CitizenValidator {
 
         Check.requireNotNull("birthDate", request.birthDate());
         Check.requireNotAfterToday("birthDate", request.birthDate());
-        Check.requireNotBefore("dea1thDate", request.deathDate(), "birthDate", request.birthDate());
+        Check.requireNotBefore("deathDate", request.deathDate(), "birthDate", request.birthDate());
 
         Check.requireMaxLength("status", request.status(), MAX_STATUS_LENGTH);
         Check.requireNoControlChars("status", request.status());

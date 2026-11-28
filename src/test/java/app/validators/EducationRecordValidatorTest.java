@@ -21,7 +21,7 @@ class EducationRecordValidatorTest
 {
     @ParameterizedTest
     @MethodSource("validEndDates")
-    @DisplayName("accepts a valid education period")
+    @DisplayName("[ED-V1, ED-V2, ED-V3] accepts a valid education period")
     void validate(LocalDate endDate)
     {
         // Arrange
@@ -39,7 +39,7 @@ class EducationRecordValidatorTest
     }
 
     @Test
-    @DisplayName("rejects a missing start date")
+    @DisplayName("[ED-I1] rejects a missing start date")
     void validateMissingStartDate()
     {
         // Arrange
@@ -54,7 +54,7 @@ class EducationRecordValidatorTest
     }
 
     @Test
-    @DisplayName("rejects an end date before the start date")
+    @DisplayName("[ED-I2] rejects an end date before the start date")
     void validateEndDate()
     {
         // Arrange

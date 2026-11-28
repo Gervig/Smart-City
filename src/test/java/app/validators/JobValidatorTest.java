@@ -30,7 +30,7 @@ class JobValidatorTest
     }
 
     @Test
-    @DisplayName("accepts a valid job with one employer")
+    @DisplayName("[JT-V1, JS-V1, JE-V1, JST-V1, JM-V1] accepts a valid job with one employer")
     void validate()
     {
         // Arrange
@@ -43,12 +43,14 @@ class JobValidatorTest
 
     static Stream<org.junit.jupiter.params.provider.Arguments> salaries()
     {
-        return Stream.of(arguments(BigDecimal.ZERO, false), arguments(new BigDecimal("-0.01"), true));
+        return Stream.of(arguments(new BigDecimal("-0.01"), true), arguments(BigDecimal.ZERO, false),
+                arguments(new BigDecimal("0.01"), false), arguments(new BigDecimal("-50000"), true),
+                arguments(new BigDecimal("45000.50"), false));
     }
 
     @ParameterizedTest
     @MethodSource("salaries")
-    @DisplayName("allows zero salary and rejects negative salary")
+    @DisplayName("[JS-V1, JS-V2, JS-V3, JS-I1, JS-I2] allows zero salary and rejects negative salary")
     void validateSalary(BigDecimal salary, boolean invalid)
     {
         // Arrange
@@ -70,7 +72,7 @@ class JobValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", " "})
-    @DisplayName("rejects a blank title")
+    @DisplayName("[JT-I1] rejects a blank title")
     void validateTitle(String title)
     {
         // Arrange
@@ -84,8 +86,36 @@ class JobValidatorTest
         assertTrue(exception.getMessage().startsWith("title"));
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {1, JobValidator.MAX_TITLE_LENGTH})
+    @DisplayName("[JT-V2, JT-V3] accepts a title of 1 and of 150 characters")
+    void validateTitleLength(int length)
+    {
+        // Arrange
+        JobRequestDTO request = request(1L, null, "a".repeat(length), BigDecimal.ZERO, LocalDate.now(), null, "active");
+
+        // Act / Assert
+        assertDoesNotThrow(() -> JobValidator.validate(request));
+    }
+
     @Test
-    @DisplayName("rejects a missing salary")
+    @DisplayName("[JT-I2] rejects a title of 151 characters")
+    void validateTitleTooLong()
+    {
+        // Arrange
+        JobRequestDTO request = request(1L, null, "a".repeat(JobValidator.MAX_TITLE_LENGTH + 1), BigDecimal.ZERO,
+                LocalDate.now(), null, "active");
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> JobValidator.validate(request));
+
+        // Assert
+        assertEquals("title must be at most 150 characters", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("[JS-I3] rejects a missing salary")
     void validateMissingSalary()
     {
         // Arrange
@@ -100,7 +130,7 @@ class JobValidatorTest
     }
 
     @Test
-    @DisplayName("rejects a missing start date")
+    @DisplayName("[JD-I1] rejects a missing start date")
     void validateMissingStartDate()
     {
         // Arrange
@@ -115,7 +145,7 @@ class JobValidatorTest
     }
 
     @Test
-    @DisplayName("rejects an end date before the start date")
+    @DisplayName("[JE-I1] rejects an end date before the start date")
     void validateEndDate()
     {
         // Arrange
@@ -128,12 +158,26 @@ class JobValidatorTest
                 () -> JobValidator.validate(request));
 
         // Assert
-        assertTrue(exception.getMessage().startsWith("endDate"));
+        assertEquals("endDate must not be before startDate", exception.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1})
+    @DisplayName("[JE-V2, JE-V3] accepts an end date on or after the start date")
+    void validateEndDateOnOrAfterStart(int daysAfterStart)
+    {
+        // Arrange
+        LocalDate start = LocalDate.now().minusYears(1);
+        JobRequestDTO request = request(1L, null, "Engineer", BigDecimal.ZERO, start,
+                start.plusDays(daysAfterStart), "inactive");
+
+        // Act / Assert
+        assertDoesNotThrow(() -> JobValidator.validate(request));
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"active", "inactive"})
-    @DisplayName("accepts supported statuses with matching dates")
+    @DisplayName("[JST-V1, JST-V2] accepts supported statuses with matching dates")
     void validateStatus(String status)
     {
         // Arrange
@@ -146,7 +190,7 @@ class JobValidatorTest
     }
 
     @Test
-    @DisplayName("rejects an unsupported status")
+    @DisplayName("[JST-I1] rejects an unsupported status")
     void validateInvalidStatus()
     {
         // Arrange
@@ -164,7 +208,7 @@ class JobValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", " "})
-    @DisplayName("rejects a missing status")
+    @DisplayName("[JST-I2] rejects a missing status")
     void validateMissingStatus(String status)
     {
         // Arrange
@@ -180,7 +224,7 @@ class JobValidatorTest
     }
 
     @Test
-    @DisplayName("requires active jobs to have no end date")
+    @DisplayName("[JST-I4] requires active jobs to have no end date")
     void validateActiveDates()
     {
         // Arrange
@@ -196,7 +240,7 @@ class JobValidatorTest
     }
 
     @Test
-    @DisplayName("requires inactive jobs to have an end date")
+    @DisplayName("[JST-I5] requires inactive jobs to have an end date")
     void validateInactiveDates()
     {
         // Arrange
@@ -212,7 +256,7 @@ class JobValidatorTest
     }
 
     @Test
-    @DisplayName("rejects a job without an employer")
+    @DisplayName("[JM-I1] rejects a job without an employer")
     void validateMissingEmployer()
     {
         // Arrange
@@ -228,7 +272,7 @@ class JobValidatorTest
     }
 
     @Test
-    @DisplayName("rejects a job with two employers")
+    @DisplayName("[JM-I2] rejects a job with two employers")
     void validateBothEmployers()
     {
         // Arrange
@@ -244,7 +288,7 @@ class JobValidatorTest
     }
 
     @Test
-    @DisplayName("accepts a job with only an institution")
+    @DisplayName("[JM-V2] accepts a job with only an institution")
     void validateInstitutionEmployer()
     {
         // Arrange
@@ -253,5 +297,37 @@ class JobValidatorTest
 
         // Act / Assert
         assertDoesNotThrow(() -> JobValidator.validate(request));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Anna\n", "An\tna", "Anna\0", "Anna\u007F"})
+    @DisplayName("[JT-I3] rejects a title with a control character")
+    void titleWithControlCharacter(String value)
+    {
+        // Arrange
+        JobRequestDTO request = request(1L, null, value, BigDecimal.ZERO, LocalDate.now(), null, "active");
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> JobValidator.validate(request));
+
+        // Assert
+        assertEquals("title must not contain control characters", exception.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Active", "ACTIVE", "active ", " inactive"})
+    @DisplayName("[JST-I3] rejects a status in the wrong case or with surrounding spaces")
+    void statusWrongCaseOrSpaces(String value)
+    {
+        // Arrange
+        JobRequestDTO request = request(1L, null, "Engineer", BigDecimal.ZERO, LocalDate.now(), null, value);
+
+        // Act
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> JobValidator.validate(request));
+
+        // Assert
+        assertEquals("status must be one of active, inactive", exception.getMessage());
     }
 }
