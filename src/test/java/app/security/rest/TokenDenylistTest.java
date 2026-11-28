@@ -33,7 +33,7 @@ class TokenDenylistTest
     }
 
     @Test
-    @DisplayName("a logged-out token is revoked until it expires")
+    @DisplayName("[EP-58] a logged-out token is revoked until it expires")
     void revokedUntilExpiry()
     {
         // Arrange
@@ -47,7 +47,7 @@ class TokenDenylistTest
     }
 
     @Test
-    @DisplayName("a token that was never logged out is not revoked")
+    @DisplayName("[EP-60] a token that was never logged out is not revoked")
     void unknownToken()
     {
         // Arrange
@@ -74,7 +74,7 @@ class TokenDenylistTest
     }
 
     @Test
-    @DisplayName("the entry is removed once the token has expired")
+    @DisplayName("[EP-59, BVA-47] the entry is removed once the token has expired")
     void removedAfterExpiry()
     {
         // Arrange
@@ -89,7 +89,7 @@ class TokenDenylistTest
     }
 
     @Test
-    @DisplayName("one second before expiry the token is still revoked (boundary)")
+    @DisplayName("[EP-58, BVA-46] one second before expiry the token is still revoked (boundary)")
     void revokedJustBeforeExpiry()
     {
         // Arrange
@@ -103,7 +103,7 @@ class TokenDenylistTest
     }
 
     @Test
-    @DisplayName("a token that has already expired is not stored")
+    @DisplayName("[EP-59] a token that has already expired is not stored")
     void alreadyExpired()
     {
         // Arrange

@@ -189,7 +189,7 @@ class NearbyPlacesServiceTest
 
     @ParameterizedTest
     @CsvSource({"true,false", "false,true"})
-    @DisplayName("rejects a location missing either coordinate")
+    @DisplayName("[EP-66] rejects a location missing either coordinate")
     void getNearbyMissingCoordinates(boolean latitudeMissing, boolean longitudeMissing)
     {
         // Arrange
@@ -217,7 +217,7 @@ class NearbyPlacesServiceTest
 
     @ParameterizedTest
     @MethodSource("coordinates")
-    @DisplayName("accepts inclusive coordinate boundaries and rejects out-of-range values")
+    @DisplayName("[EP-64, EP-65, BVA-52, BVA-53, BVA-54, BVA-55] accepts inclusive coordinate boundaries and rejects out-of-range values")
     void getNearbyCoordinates(double latitude, double longitude, boolean valid)
     {
         // Arrange
@@ -239,7 +239,7 @@ class NearbyPlacesServiceTest
 
     @ParameterizedTest
     @CsvSource({"0,false", "1,true", "5000,true", "5001,false"})
-    @DisplayName("checks inclusive radius boundaries")
+    @DisplayName("[EP-61, EP-62, EP-63, BVA-48, BVA-49, BVA-50, BVA-51] checks inclusive radius boundaries")
     void getNearbyRadius(int radius, boolean valid)
     {
         // Arrange
@@ -259,7 +259,7 @@ class NearbyPlacesServiceTest
 
     @ParameterizedTest
     @ValueSource(strings = {"hospital", "school", "college", "pharmacy", "restaurant", "cafe", "library", "bank"})
-    @DisplayName("accepts each whitelisted amenity")
+    @DisplayName("[EP-67] accepts each whitelisted amenity")
     void getNearbyAmenity(String amenity)
     {
         // Arrange
@@ -271,7 +271,7 @@ class NearbyPlacesServiceTest
 
     @ParameterizedTest
     @MethodSource("invalidAmenities")
-    @DisplayName("rejects a missing, unknown or injected amenity")
+    @DisplayName("[EP-68] rejects a missing, unknown or injected amenity")
     void getNearbyInvalidAmenity(String amenity)
     {
         // Arrange / Act

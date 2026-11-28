@@ -29,8 +29,8 @@ class HousingValidatorTest
     }
 
     @ParameterizedTest
-    @CsvSource({"house,1", "apartment,1", "house,2"})
-    @DisplayName("accepts allowed housing types and capacities")
+    @CsvSource({"house,1", "apartment,1", "house,2", "house,9999", "house,10000"})
+    @DisplayName("[EP-14, EP-17, BVA-10, BVA-11, BVA-12, BVA-13] accepts allowed housing types and capacities from 1 to 10000")
     void validateAllowedValues(String type, int capacity)
     {
         // Arrange
@@ -43,7 +43,7 @@ class HousingValidatorTest
     // [CHANGED] Added capacity above MAX_CAPACITY (10001) to cover the upper-bound rejection branch
     @ParameterizedTest
     @CsvSource({"house,0,capacity", "house,-1,capacity", "house,10001,capacity", "villa,1,housingType", "'',1,housingType"})
-    @DisplayName("rejects invalid type or capacity")
+    @DisplayName("[EP-15, EP-16, EP-18, BVA-09, BVA-14] rejects invalid type or capacity")
     void validateInvalidValues(String type, int capacity, String field)
     {
         // Arrange
@@ -60,7 +60,7 @@ class HousingValidatorTest
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {" "})
-    @DisplayName("rejects null and blank housing types")
+    @DisplayName("[EP-19] rejects null and blank housing types")
     void validateMissingHousingType(String type)
     {
         // Arrange
