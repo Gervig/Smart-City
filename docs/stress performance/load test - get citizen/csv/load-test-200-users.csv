@@ -1,0 +1,4 @@
+Label,# Samples,Average,Median,90% Line,95% Line,99% Line,Min,Max,Error %,Throughput,Received KB/sec,Sent KB/sec
+POST Login,200,48,48,50,51,52,46,56,"0,000%","1,00478","0,44","0,26"
+Get Citizens,2000,2,3,3,4,4,2,6,"0,000%","10,04924","42,73","4,66"
+TOTAL,2200,6,3,4,48,50,2,56,"0,000%","11,05133","43,16","4,92"
