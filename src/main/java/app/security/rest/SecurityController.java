@@ -6,10 +6,10 @@ import app.exceptions.ValidationException;
 import app.security.daos.PostgresUserStore;
 import app.security.daos.UserDAO;
 import app.security.daos.UserStore;
+import app.validators.CredentialsValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import app.validators.CredentialsValidator;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -24,8 +24,16 @@ import dk.bugelhartmann.UserDTO;
 import io.javalin.http.Context;
 import io.javalin.http.ForbiddenResponse;
 import io.javalin.http.Handler;
+import io.javalin.http.HandlerType;
 import io.javalin.http.HttpStatus;
 import io.javalin.http.UnauthorizedResponse;
+import io.javalin.openapi.HttpMethod;
+import io.javalin.openapi.OpenApi;
+import io.javalin.openapi.OpenApiContent;
+import io.javalin.openapi.OpenApiContentProperty;
+import io.javalin.openapi.OpenApiResponse;
+import io.javalin.openapi.OpenApiSecurity;
+import io.javalin.security.RouteRole;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.EntityNotFoundException;
 
@@ -80,18 +88,35 @@ public class SecurityController implements ISecurityController
     @Override
     public Handler register()
     {
-        return (ctx) ->
-        {
-            UserDTO newUser = readCredentials(ctx);
-            CredentialsValidator.validateRegistration(newUser.getUsername(), newUser.getPassword());
-            Set<String> createdRoles = users.register(newUser.getUsername(), newUser.getPassword()); // 409 if taken
+        return this::registerEndpoint;
+    }
 
-            // Only the username and roles go back: the password (hash) never leaves the server
-            ObjectNode body = objectMapper.createObjectNode().put("username", newUser.getUsername());
-            ArrayNode roles = body.putArray("roles");
-            createdRoles.forEach(roles::add);
-            ctx.status(201).json(body);
-        };
+    @OpenApi(path = "/api/auth/register", methods = HttpMethod.POST, operationId = "registerUser",
+            summary = "Register a user", tags = "Authentication",
+            description = "Public endpoint. Creates a USER account. The request password is used only for registration and is never returned; registering does not issue a token.",
+            requestBody = @io.javalin.openapi.OpenApiRequestBody(content = @OpenApiContent(mimeType = "application/json", type = "object", properties = {
+                    @OpenApiContentProperty(name = "username", type = "string"),
+                    @OpenApiContentProperty(name = "password", type = "string")
+            }), required = true),
+            responses = {
+                    @OpenApiResponse(status = "201", description = "User created. Password data is not returned.", content = @OpenApiContent(mimeType = "application/json", type = "object", properties = {
+                            @OpenApiContentProperty(name = "username", type = "string"),
+                            @OpenApiContentProperty(name = "roles", type = "string", isArray = true)
+                    })),
+                    @OpenApiResponse(status = "400", description = "Invalid registration data."),
+                    @OpenApiResponse(status = "409", description = "The username already exists."),
+                    @OpenApiResponse(status = "500", description = "Unexpected server error.")
+            })
+    public void registerEndpoint(Context ctx)
+    {
+        UserDTO newUser = readCredentials(ctx);
+        CredentialsValidator.validateRegistration(newUser.getUsername(), newUser.getPassword());
+        Set<String> createdRoles = users.register(newUser.getUsername(), newUser.getPassword());
+
+        ObjectNode body = objectMapper.createObjectNode().put("username", newUser.getUsername());
+        ArrayNode roles = body.putArray("roles");
+        createdRoles.forEach(roles::add);
+        ctx.status(201).json(body);
     }
 
     @Override
@@ -117,27 +142,43 @@ public class SecurityController implements ISecurityController
     @Override
     public Handler login()
     {
-        return (ctx) ->
+        return this::loginEndpoint;
+    }
+
+    @OpenApi(path = "/api/auth/login", methods = HttpMethod.POST, operationId = "loginUser",
+            summary = "Authenticate and obtain a bearer token", tags = "Authentication",
+            description = "Public endpoint. Submit username and password. On success, returns an HS256-signed JWT with subject, issuer, username, roles, token ID, issue time, and expiration claims. In Swagger UI, paste the returned token value into Authorize without adding the Bearer prefix.",
+            requestBody = @io.javalin.openapi.OpenApiRequestBody(content = @OpenApiContent(mimeType = "application/json", type = "object", properties = {
+                    @OpenApiContentProperty(name = "username", type = "string"),
+                    @OpenApiContentProperty(name = "password", type = "string")
+            }), required = true),
+            responses = {
+                    @OpenApiResponse(status = "200", description = "JWT token and authenticated username. Do not share or log the returned token.", content = @OpenApiContent(mimeType = "application/json", type = "object", properties = {
+                            @OpenApiContentProperty(name = "token", type = "string"),
+                            @OpenApiContentProperty(name = "username", type = "string")
+                    })),
+                    @OpenApiResponse(status = "400", description = "Username or password is missing or malformed."),
+                    @OpenApiResponse(status = "401", description = "Credentials are invalid."),
+                    @OpenApiResponse(status = "500", description = "Unexpected server error.")
+            })
+    public void loginEndpoint(Context ctx)
+    {
+        ObjectNode returnObject = objectMapper.createObjectNode(); // for sending json messages back to the client
+        UserDTO user = readCredentials(ctx);
+        CredentialsValidator.validateLogin(user.getUsername(), user.getPassword()); // 400 if one is missing
+        try
         {
-            ObjectNode returnObject = objectMapper.createObjectNode(); // for sending json messages back to the client
-            UserDTO user = readCredentials(ctx);
-            CredentialsValidator.validateLogin(user.getUsername(), user.getPassword()); // 400 if one is missing
-            try
-            {
-                UserDTO verifiedUser = users.getVerifiedUser(user.getUsername(), user.getPassword());
-                String token = createToken(verifiedUser);
+            UserDTO verifiedUser = users.getVerifiedUser(user.getUsername(), user.getPassword());
+            String token = createToken(verifiedUser);
 
-                ctx.status(200).json(returnObject
-                        .put("token", token)
-                        .put("username", verifiedUser.getUsername()));
+            ctx.status(200).json(returnObject
+                    .put("token", token)
+                    .put("username", verifiedUser.getUsername()));
 
-            } catch (EntityNotFoundException | ValidationException e)
-            {
-                ctx.status(401);
-                System.out.println(e.getMessage());
-                ctx.json(returnObject.put("msg", e.getMessage()));
-            }
-        };
+        } catch (EntityNotFoundException | ValidationException e)
+        {
+            ctx.status(401).json(returnObject.put("msg", e.getMessage()));
+        }
     }
 
     // Purpose: To end the session of the token in the request. The route is protected, so authenticate() has
@@ -145,13 +186,44 @@ public class SecurityController implements ISecurityController
     @Override
     public Handler logout()
     {
-        return (ctx) ->
-        {
-            String token = verifiedToken(ctx);
-            JWTClaimsSet claims = SignedJWT.parse(token).getJWTClaimsSet();
-            denylist.revoke(tokenId(token, claims), claims.getExpirationTime().toInstant());
-            ctx.status(200).json(objectMapper.createObjectNode().put("msg", "Logged out"));
-        };
+        return this::logoutEndpoint;
+    }
+
+    @OpenApi(path = "/api/auth/logout", methods = HttpMethod.POST, operationId = "logoutUser",
+            summary = "Revoke the current bearer token", tags = "Authentication",
+            description = "Requires a valid bearer token and the USER or ADMIN role. The token is denylisted until it expires; authenticate again to obtain a new token.",
+            security = @OpenApiSecurity(name = "BearerAuth"),
+            responses = {
+                    @OpenApiResponse(status = "200", description = "Logout confirmation.", content = @OpenApiContent(mimeType = "application/json", type = "object", properties = {
+                            @OpenApiContentProperty(name = "msg", type = "string")
+                    })),
+                    @OpenApiResponse(status = "401", description = "Missing, invalid, expired, or revoked bearer token."),
+                    @OpenApiResponse(status = "500", description = "Unexpected server error.")
+            })
+    public void logoutEndpoint(Context ctx) throws Exception
+    {
+        String token = verifiedToken(ctx);
+        JWTClaimsSet claims = SignedJWT.parse(token).getJWTClaimsSet();
+        denylist.revoke(tokenId(token, claims), claims.getExpirationTime().toInstant());
+        ctx.status(200).json(objectMapper.createObjectNode().put("msg", "Logged out"));
+    }
+
+    @OpenApi(path = "/api/secured/demo", methods = HttpMethod.GET, operationId = "getSecuredDemo",
+            summary = "Call the secured demo endpoint", tags = "Authentication",
+            description = "Requires a valid bearer token and the USER or ADMIN role.",
+            security = @OpenApiSecurity(name = "BearerAuth"),
+            responses = {
+                    @OpenApiResponse(status = "200", description = "Success message.", content = @OpenApiContent(mimeType = "application/json", type = "object", properties = {
+                            @OpenApiContentProperty(name = "msg", type = "string")
+                    })),
+                    @OpenApiResponse(status = "401", description = "Missing or invalid bearer token."),
+                    @OpenApiResponse(status = "403", description = "The authenticated user does not have the USER or ADMIN role.")
+            })
+    public void securedDemo(Context ctx)
+    {
+        Set<RouteRole> assignedRoles = ctx.routeRoles();
+        System.out.println("Assigned roles inside route: " + assignedRoles);
+        ctx.json(objectMapper.createObjectNode().put("msg", "Success"));
     }
 
     @Override
@@ -160,13 +232,11 @@ public class SecurityController implements ISecurityController
         return (ctx) ->
         {
             // This is a preflight request => no need for authentication
-            if (ctx.method().toString().equals("OPTIONS"))
+            if (ctx.method() == HandlerType.OPTIONS)
             {
                 ctx.status(200);
                 return;
             }
-            //TODO det her er ikke smart,
-            // hvis ens token er forkert kommer man stadig igennem hvis det er et åbent endpoint
 
             // If the endpoint is not protected with roles or is open to ANYONE role, then skip
             Set<String> allowedRoles = ctx.routeRoles().stream().map(role -> role.toString().toUpperCase()).collect(Collectors.toSet());
@@ -183,10 +253,10 @@ public class SecurityController implements ISecurityController
             }
 
             // If the Authorization Header was malformed, then no entry
-            String[] parts = header.split(" ");
-            if (parts.length != 2)
+            String[] parts = header.trim().split("\\s+");
+            if (parts.length != 2 || !parts[0].equalsIgnoreCase("Bearer") || parts[1].isBlank())
             {
-                throw new UnauthorizedResponse("Authorization header is malformed"); // UnauthorizedResponse is javalin 6 specific but response is not json!
+                throw new UnauthorizedResponse("Authorization header is malformed");
             }
             String token = parts[1];
 
@@ -206,6 +276,12 @@ public class SecurityController implements ISecurityController
     {
         return (ctx) ->
         {
+            if (ctx.method() == HandlerType.OPTIONS)
+            {
+                ctx.status(200);
+                return;
+            }
+
             Set<String> allowedRoles = ctx.routeRoles()
                     .stream()
                     .map(role -> role.toString().toUpperCase())
@@ -225,7 +301,7 @@ public class SecurityController implements ISecurityController
             UserDTO user = ctx.attribute("user");
             if (user == null)
             {
-                throw new ForbiddenResponse("No user was added from the token");
+                throw new UnauthorizedResponse("No authenticated user was added from the token");
             }
             // 4. See if any role matches
             if (!userHasAllowedRole(user, allowedRoles))

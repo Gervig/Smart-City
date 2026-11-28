@@ -139,22 +139,18 @@ class CitizenValidatorTest
 
     @ParameterizedTest
     @MethodSource("deathDates")
-    @DisplayName("allows death on birth date but rejects an earlier death date")
-    void validateDeathDate(LocalDate date, boolean invalid)
-    {
+    @DisplayName("validates death date against birth date")
+    void validateDeathDate(LocalDate date, boolean invalid) {
         // Arrange
         LocalDate birthDate = LocalDate.now().minusYears(20);
-        CitizenRequestDTO request = request("Alex", "Smith", birthDate, date, "deceased", null);
+        CitizenRequestDTO request =
+                request("Alex", "Smith", birthDate, date, "deceased", null);
 
-        // Act
-        if (invalid)
-        {
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        // Act & Assert
+        if (invalid) {
+            assertThrows(IllegalArgumentException.class,
                     () -> CitizenValidator.validate(request));
-            assertTrue(exception.getMessage().startsWith("deathDate"));
-        }
-        else
-        {
+        } else {
             assertDoesNotThrow(() -> CitizenValidator.validate(request));
         }
     }

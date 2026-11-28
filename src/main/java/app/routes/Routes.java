@@ -2,6 +2,7 @@
 package app.routes;
 
 import app.controllers.CrudController;
+import app.controllers.DocumentedCrudControllers;
 import app.controllers.JobController;
 import app.controllers.NearbyPlacesController;
 import app.controllers.SeedController;
@@ -90,28 +91,28 @@ public class Routes {
 
         // Existing CRUD routes
         crud(app, "/locations",
-                new CrudController<>(locationService, LocationRequestDTO.class));
+                new DocumentedCrudControllers.Locations(locationService));
 
         crud(app, "/families",
-                new CrudController<>(familyService, FamilyRequestDTO.class));
+                new DocumentedCrudControllers.Families(familyService));
 
         crud(app, "/housings",
-                new CrudController<>(housingService, HousingRequestDTO.class));
+                new DocumentedCrudControllers.Housings(housingService));
 
         crud(app, "/citizens",
-                new CrudController<>(citizenService, CitizenRequestDTO.class));
+                new DocumentedCrudControllers.Citizens(citizenService));
 
         crud(app, "/citizen-relationships",
-                new CrudController<>(citizenRelationshipService, CitizenRelationshipRequestDTO.class));
+                new DocumentedCrudControllers.CitizenRelationships(citizenRelationshipService));
 
         crud(app, "/institutions",
-                new CrudController<>(institutionService, InstitutionRequestDTO.class));
+                new DocumentedCrudControllers.Institutions(institutionService));
 
         crud(app, "/companies",
-                new CrudController<>(companyService, CompanyRequestDTO.class));
+                new DocumentedCrudControllers.Companies(companyService));
 
         crud(app, "/education-records",
-                new CrudController<>(educationRecordService, EducationRecordRequestDTO.class));
+                new DocumentedCrudControllers.EducationRecords(educationRecordService));
 
         crud(app, "/jobs", new JobController(jobService), ADMINS);
 

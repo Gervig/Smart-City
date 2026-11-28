@@ -411,28 +411,64 @@ The negative tests assert the validation messages from `src/main/java/app/valida
 
 ## API reference
 
-All CRUD endpoints below are registered at the application root. Each resource supports `GET /<resource>`, `GET /<resource>/{id}`, `POST /<resource>`, `PUT /<resource>/{id}`, and `DELETE /<resource>/{id}`.
+The backend listens on `http://localhost:7070`. This section covers the interactive documentation, authentication and roles, the CRUD resources (with paging, sorting and filtering), and the remaining endpoints.
 
-### Role rules
+### API documentation (Swagger UI)
 
-Users and administrators have full CRUD on all city data. The exception is a job's salary, which only administrators can see and set.
+With the backend running, open <http://localhost:7070/swagger>. The page lists every endpoint with its parameters, request and response bodies, status codes and required role, and lets you try the requests.
 
-| Action | `ANYONE` (no token) | `USER` | `ADMIN` |
+1. Run `POST /api/auth/login` under **Authentication**, for example with `User1` / `Password123`, or `admin` with the `ADMIN_PASSWORD` of your environment.
+2. Copy the `token` from the response, press **Authorize** at the top and paste it.
+3. Every request now sends the token. Press **Try it out** on an endpoint, fill in the fields and press **Execute**.
+
+The description is [`src/main/resources/public/docs/openapi.yaml`](src/main/resources/public/docs/openapi.yaml) (OpenAPI 3.0.3), served as a public static file together with `index.html`, which loads Swagger UI 5.17.14 from a CDN (internet access is needed). The file is written by hand, so **update it when you change a route in `Routes.java` or a DTO.** The route overview at `/api/routes` lists what the application registers, which is a quick way to compare.
+
+### Authentication
+
+| Method | Path | Access | Description |
+|---|---|---|---|
+| POST | `/api/auth/register` | Public | Register a user (role `user`). 201 with username and roles; 400 for a missing username or password or a password under 8 characters; 409 for a taken username |
+| POST | `/api/auth/login` | Public | Verify credentials and return a JWT. 400 for a missing username or password; 401 for a wrong password or unknown user |
+| POST | `/api/auth/logout` | `USER`, `ADMIN` | Reject the token in the request from now on |
+| GET | `/api/secured/demo` | `USER` | Verify a user token |
+
+Registration and login accept JSON credentials:
+
+```json
+{
+  "username": "city-user",
+  "password": "a-local-password"
+}
+```
+
+Send the token returned by login on protected routes as `Authorization: Bearer <token>`.
+
+**Logout.** Every token has a unique id (the `jti` claim). Logout puts that id on a denylist until the token's expiry time, and the authorize filter rejects any token on the list with 401. Other tokens of the same user keep working. The denylist is kept in memory, so a restart clears it: a logged-out token is accepted again until it expires (at most `TOKEN_EXPIRE_TIME`).
+
+### Roles and access
+
+Users and administrators have full CRUD on all city data. The exception is a job's salary, which only administrators can see, set, filter or sort by.
+
+| Action | No token | `USER` | `ADMIN` |
 |---|---|---|---|
 | `POST /api/auth/register`, `POST /api/auth/login` | Yes | Yes | Yes |
-| `GET`, `POST`, `PUT`, `DELETE` on every CRUD resource except jobs, and `GET /locations/{id}/nearby` | 401 | Yes | Yes |
+| `GET`, `POST`, `PUT`, `DELETE` on every CRUD resource except jobs | 401 | Yes | Yes |
+| `GET /locations/{id}/nearby`, the database views | 401 | Yes | Yes |
 | `GET /jobs`, `GET /jobs/{id}` | 401 | Yes, `salary` is `null` | Yes, with salary |
-| `PUT /jobs/{id}` | 401 | Yes, without `salary` (the stored salary is kept); sending a salary gives 403 | Yes |
-| `DELETE /jobs/{id}` | 401 | Yes | Yes |
+| `GET /jobs` with a `salary…` filter or a `sort=salary` | 401 | 403 | Yes |
 | `POST /jobs` (a job needs a salary) | 401 | 403 | Yes |
+| `PUT /jobs/{id}` | 401 | Yes without `salary` (the stored salary is kept); sending a salary gives 403 | Yes |
+| `DELETE /jobs/{id}` | 401 | Yes | Yes |
+| `GET /active-employment` | 401 | Yes, `salary` is `null` | Yes, with salary |
+| `GET /citizens/{id}/total-salary` | 401 | 403 | Yes |
 | `POST /api/admin/seed/*` | 401 | 403 | Yes |
 | `POST /api/auth/logout` | 401 | Yes | Yes |
 
-A missing, malformed, expired, tampered or logged-out token gives 401; a valid token without the needed role gives 403. The route roles are set in `Routes.java` (`USERS` and `ADMINS`) and the salary rule in `JobController.java`. It is the API counterpart of the database user `smartcity_restricted`, which can read every `job` column except `salary` (`SQL/users/08_users.sql`).
+A missing, malformed, expired, tampered or logged-out token gives 401; a valid token without the needed role gives 403. Route roles are set in `Routes.java` (`USERS`, `ADMINS`) and the salary rules in `JobController.java` and `DatabaseViewsController.java`. They are the API counterpart of the database user `smartcity_restricted`, which can read every `job` column except `salary` (`SQL/users/08_users.sql`).
 
-### Logout
+### CRUD resources
 
-`POST /api/auth/logout` ends the token sent in the `Authorization` header. Every token has a unique id (the `jti` claim); logout puts that id on a denylist until the token's expiry time, and the authorize filter rejects any token on the list with 401. Other tokens of the same user keep working. The denylist is kept in memory, so a restart clears it; a logged-out token is then accepted again until it expires (at most `TOKEN_EXPIRE_TIME`).
+Each resource is registered at the application root and supports `GET /<resource>`, `GET /<resource>/{id}`, `POST /<resource>`, `PUT /<resource>/{id}` and `DELETE /<resource>/{id}`.
 
 | Resource | Path |
 |---|---|
@@ -446,13 +482,24 @@ A missing, malformed, expired, tampered or logged-out token gives 401; a valid t
 | Education records | `/education-records` |
 | Jobs | `/jobs` |
 
-Collection endpoints support zero-based pagination and filtering with `page` (default `0`), `size` (default `20`, maximum `100`), and `sort=field,asc|desc` (default `id,asc`). They return a JSON envelope containing `data`, `page`, `size`, `totalElements`, and `totalPages`; counts include all matching records. For example:
+#### Paging, sorting and filtering
+
+Collection endpoints take these query parameters:
+
+| Parameter | Meaning | Default |
+|---|---|---|
+| `page` | Zero-based page number | `0` |
+| `size` | Items per page, 1 to 100 | `20` |
+| `sort` | `field,asc` or `field,desc` | `id,asc` |
+| any filter | See the table below | none |
+
+They return an envelope with `data`, `page`, `size`, `totalElements` and `totalPages`; the counts include all matching records. A page beyond the last returns an empty `data` array. Example:
 
 ```text
 GET /citizens?page=0&size=20&sort=familyId,asc&lastName=smith&birthDateFrom=1980-01-01&birthDateTo=2000-12-31
 ```
 
-Sort and filter names are allowlisted per resource; relationship ID fields such as `familyId`, `housingId`, and `locationId` address the related entity IDs. Unsupported fields, invalid filter values, invalid page or size values, and invalid sort directions return HTTP 400. A page beyond the last page returns an empty `data` array. String filters use case-insensitive partial matching. Available filters are:
+Sort and filter names are allow-listed per resource. Relationship fields such as `familyId`, `housingId` and `locationId` address the related entity ids. String filters match case-insensitively on part of the value; filters ending in `From` and `To` are inclusive ranges. Unsupported fields, invalid filter values, invalid page or size values and invalid sort directions return 400.
 
 | Resource | Filters |
 |---|---|
@@ -462,33 +509,33 @@ Sort and filter names are allowlisted per resource; relationship ID fields such 
 | Locations | `name`, `streetAddress` |
 | Companies | `locationId`, `name`, `status`, `foundedDateFrom`, `foundedDateTo` |
 | Institutions | `locationId`, `name`, `type` |
-| Jobs | `citizenId`, `companyId`, `institutionId`, `title`, `status`, `salaryFrom`, `salaryTo`, `startDateFrom`, `startDateTo`, `endDateFrom`, `endDateTo` |
+| Jobs | `citizenId`, `companyId`, `institutionId`, `title`, `status`, `salaryFrom`, `salaryTo` (admin only), `startDateFrom`, `startDateTo`, `endDateFrom`, `endDateTo` |
 | Education records | `citizenId`, `institutionId`, `startDateFrom`, `startDateTo`, `endDateFrom`, `endDateTo` |
 | Citizen relationships | `citizenId1`, `citizenId2`, `relationshipType`, `startDateFrom`, `startDateTo`, `endDateFrom`, `endDateTo` |
 
+### Database views and functions
+
+These endpoints read PostgreSQL views and a stored function. The views return all rows and are not paged.
+
 | Method | Path | Access | Description |
 |---|---|---|---|
-| POST | `/api/auth/register` | Public | Register a user; new accounts receive the `user` role. 201 with username and roles; 400 for a missing username or password or a password under 8 characters; 409 for a taken username |
-| POST | `/api/auth/login` | Public | Verify credentials and return a JWT. 400 for a missing username or password; 401 for a wrong password or unknown user |
-| POST | `/api/auth/logout` | `USER`, `ADMIN` | Log out: the token in the request is rejected from now on |
-| GET | `/api/secured/demo` | `USER` | Verify a user token |
+| GET | `/citizen-details` | `USER`, `ADMIN` | Each citizen with age, family name and housing |
+| GET | `/housing-occupancy` | `USER`, `ADMIN` | Capacity, current occupants and free spots per housing |
+| GET | `/company-financial-summary` | `USER`, `ADMIN` | Active jobs and total active salaries per company |
+| GET | `/active-employment` | `USER`, `ADMIN` | Active jobs with employee and company; `salary` is `null` for users |
+| GET | `/citizen-relationships-view` | `USER`, `ADMIN` | Relationships with both citizens' names |
+| GET | `/citizens/{id}/total-salary` | `ADMIN` | Total salary of a citizen (stored function `total_citizen_salary`) |
+
+### Other endpoints
+
+| Method | Path | Access | Description |
+|---|---|---|---|
 | GET | `/locations/{id}/nearby?radius=1000&amenity=hospital` | `USER`, `ADMIN` | Find nearby OSM places for a location |
 | POST | `/api/admin/seed/locations?south=...&west=...&north=...&east=...&amenity=hospital&limit=20` | `ADMIN` | Import named OSM locations; coordinates and query options are optional |
 | POST | `/api/admin/seed/fake?citizens=100&seed=42` | `ADMIN` | Generate deterministic related fake records |
 | POST | `/api/admin/seed/enrich` | `ADMIN` | Fill missing fields from OSM tags |
 
-For protected routes, send the token returned by login as `Authorization: Bearer <token>`. See [Role rules](#role-rules) for which role each route needs.
-
-Registration and login accept JSON credentials, for example:
-
-```json
-{
-  "username": "city-user",
-  "password": "a-local-password"
-}
-```
-
-The route overview is available at `/api/routes` while the application is running. Error responses and exact request fields depend on the corresponding DTOs and validators in `src/main/java/app/dtos/` and `src/main/java/app/validators/`.
+The route overview is available at `/api/routes` while the application runs. Exact request fields and error messages follow the DTOs and validators in `src/main/java/app/dtos/` and `src/main/java/app/validators/`.
 
 ## Database Design
 
