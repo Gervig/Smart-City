@@ -1,0 +1,308 @@
+{
+  "data": [
+    {
+      "id": 14,
+      "firstName": "FilterFirst_1795387223999_362455",
+      "lastName": "FilterLast_1795387223956_193460",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 51,
+      "housingId": null
+    },
+    {
+      "id": 15,
+      "firstName": "FilterFirst_1795387239023_681806",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 16,
+      "firstName": "PageCitizen_1795387239337_701170",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 17,
+      "firstName": "PageCitizen_1795387239664_236996",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 18,
+      "firstName": "PageCitizen_1795387239989_37463",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 19,
+      "firstName": "PageCitizen_1795387240303_517739",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 20,
+      "firstName": "PageCitizen_1795387240630_957495",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 21,
+      "firstName": "PageCitizen_1795387240957_267931",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 22,
+      "firstName": "PageCitizen_1795387241284_228061",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 23,
+      "firstName": "PageCitizen_1795387241598_360804",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 24,
+      "firstName": "PageCitizen_1795387241909_794736",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 25,
+      "firstName": "PageCitizen_1795387242221_100628",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 26,
+      "firstName": "PageCitizen_1795387242534_550958",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 27,
+      "firstName": "PageCitizen_1795387242845_129838",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 28,
+      "firstName": "PageCitizen_1795387243172_978045",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 29,
+      "firstName": "PageCitizen_1795387243484_339658",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 30,
+      "firstName": "PageCitizen_1795387243797_344880",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 31,
+      "firstName": "PageCitizen_1795387244109_906873",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 32,
+      "firstName": "PageCitizen_1795387244435_852049",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    },
+    {
+      "id": 34,
+      "firstName": "PageCitizen_1795387245061_630068",
+      "lastName": "FilterLast_1795387238973_844667",
+      "birthDate": [
+        1990,
+        5,
+        17
+      ],
+      "deathDate": null,
+      "status": "alive",
+      "gender": "female",
+      "familyId": 52,
+      "housingId": null
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 197,
+  "totalPages": 10
+}
