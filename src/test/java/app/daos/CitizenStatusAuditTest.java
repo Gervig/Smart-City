@@ -157,7 +157,7 @@ class CitizenStatusAuditTest
         execute("postgres", "postgres", "UPDATE citizen SET death_date = '2023-01-02' WHERE id = " + id);
 
         // Act
-        execute("postgres", "postgres", "UPDATE citizen SET death_date = NULL WHERE id = " + id);
+        execute("postgres", "postgres", "UPDATE citizen SET status = 'alive', death_date = NULL WHERE id = " + id);
 
         // Assert
         assertEquals("deceased -> alive | 2023-01-02 -> null | postgres | null", history(id).get(1));
@@ -193,7 +193,7 @@ class CitizenStatusAuditTest
             connection.commit();
 
             // Act: the next transaction on the same connection sets no user
-            statement.execute("UPDATE citizen SET death_date = NULL WHERE id = " + id);
+            statement.execute("UPDATE citizen SET status = 'alive', death_date = NULL WHERE id = " + id);
             connection.commit();
         }
 
